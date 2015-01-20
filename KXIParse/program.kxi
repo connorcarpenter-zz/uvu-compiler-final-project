@@ -1,0 +1,28 @@
+class Cat {
+	unprotected int count = 0;
+	unprotected int value = 1;
+	protected int max = 10;
+	unprotected int state[] = new int[10];
+	unprotected void step()
+	{
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value -= max;
+		count = count + 1;
+		if(count >= max)
+			count = 0;
+		cout << value;
+	}
+}
+
+void kxi2015 main()
+{
+	Cat myCat = new Cat();
+	char go = 'a';
+	while(go != 'x')
+	{
+		myCat.step();
+		cin >> go;
+	}
+}
