@@ -1,0 +1,30 @@
+﻿states
+
+word - keyword, modifier, identifier, type
+number -
+character - printable, nonprintable (backslashed)
+punctuation - ;, {, }, [, ], (, ), ',', '.'
+comment - // -> end of line
+number - digitz
+numberoroperation - + or -
+operation
+
+
+values
+
+comment
+keyword
+modifier
+identifier
+type
+character
+number
+{
+}
+[
+]
+(
+)
+=
+;
+,
