@@ -1,3 +1,8 @@
+
+//Comment this!
+		
+			//Comment this!
+
 class Cat { // This is the Cat class
 	unprotected int count = 0;
 	unprotected int value = 1;
