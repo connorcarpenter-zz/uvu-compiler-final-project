@@ -1,4 +1,4 @@
-class Cat {
+class Cat { // This is the Cat class
 	unprotected int count = 0;
 	unprotected int value = 1;
 	protected int max = 10;
@@ -16,7 +16,7 @@ class Cat {
 	}
 }
 
-void kxi2015 main()
+void kxi2015 main() // This is the main function
 {
 	Cat myCat = new Cat();
 	char go = 'a';

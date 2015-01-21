@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="program.kxi" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="kxi_notes.txt" />

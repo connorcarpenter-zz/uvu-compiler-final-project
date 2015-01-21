@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace KXIParse
 {
@@ -20,45 +21,40 @@ namespace KXIParse
             return currentToken;
         }
 
-        private enum State { Begin, LookForWord}
-
         public void NextToken()
         {
-            var value = GetNextChar();
-            var state = State.Begin;
+            LoadNextLine();
 
-            var done = false;
-            while (!done)
-            {
-                if(value== "")
-                {
-                    currentToken = new Token(TokenType.EOT, "");
-                    done = true;
-                    continue;
-                }
-                if (value == " ")
-                {
-                    value = GetNextChar();
-                    continue;
-                }
-                if (Char.IsLetter(value[0]))
-                {
-                    switch (value)
-                    {
-                        case "atoi"
-                    }
-                }
-            }
+            //get rid of whitespace and next line symbols, continue
+            currentLine = Regex.Replace(currentLine, "[\\s\\N]+", "");
+
+            LoadNextLine();
+
+            //get rid of comments, if so NEXT
+
+            //get identifier, if so NEXT
+
+            //get number, if so NEXT
+
+            //get end of line symbol (as EOT), if so NEXT
+
+            //get any of the literal token types, if so NEXT
+
+            //continue to go forward until reaching whitespace, label all that as an unknown
         }
 
-        private string GetNextChar()
+        private void LoadNextLine()
         {
-            if(currentLine.Length==0)
-                currentLine += file.ReadLine();
-            if (currentLine.Length == 0) return "";
-            var value = ""+currentLine[0];
-            currentLine=currentLine.Remove(0, 1);
-            return value;
+            while (currentLine.Length < 80)
+            {
+                var nextLine = file.ReadLine();
+                if (nextLine == null)
+                {
+                    currentLine += "\\E";
+                    break;
+                }
+                currentLine += "\\N" + nextLine;
+            }
         }
     }
 }
