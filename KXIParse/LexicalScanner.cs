@@ -48,24 +48,13 @@ namespace KXIParse
             }
             if(DONE)return;
             
+            //If you have not found an acceptable character log it as Unknown
             var firstChar = ""+currentLine[0];
             currentLine = currentLine.Remove(0,1);
             if(currentToken.Type==TokenType.Unknown)
                 currentToken.Value+=firstChar;
             else
                 currentToken = new Token(TokenType.Unknown,firstChar);
-
-            //get rid of comments, if so NEXT
-
-            //get identifier, if so NEXT
-
-            //get number, if so NEXT
-
-            //get end of line symbol (as EOT), if so NEXT
-
-            //get any of the literal token types, if so NEXT
-
-            //continue to go forward until reaching whitespace, label all that as an unknown
         }
 
         private void LoadNextLine()
