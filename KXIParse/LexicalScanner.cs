@@ -8,12 +8,14 @@ namespace KXIParse
         private Token currentToken;
         private readonly System.IO.StreamReader file;
         private string currentLine;
+        private int lineNumber;
 
         public LexicalScanner(string fileName)
         {
             file = new System.IO.StreamReader(fileName);
             currentLine = file.ReadLine();
             currentToken = null;
+            lineNumber = 1;
         }
 
         public Token GetToken()
@@ -26,9 +28,21 @@ namespace KXIParse
             LoadNextLine();
 
             //get rid of whitespace and next line symbols, continue
-            currentLine = Regex.Replace(currentLine, "^(\\s|(#N#))+", "");
+            while (true)
+            {
+                var whitespace = Regex.Match(currentLine, "^(\\s)*(#N#)?").Value;
+                if (whitespace.Length > 0)
+                {
+                    if (whitespace.Contains("#N#"))
+                        lineNumber++;
+                    currentLine = currentLine.Remove(0, whitespace.Length);
+                }
+                else
+                    break;
+                LoadNextLine();
+            }
 
-            LoadNextLine();
+            //we are now at the first character of a real symbol number
 
             var DONE = false;
             foreach (var tokenData in TokenDictionary.Get())
@@ -39,8 +53,9 @@ namespace KXIParse
                 if (!string.IsNullOrEmpty(value))
                 {
                     currentLine = currentLine.Remove(0, value.Length);
-                    value = value.Replace("#N#", "");
-                    currentToken = new Token(tokenData.Key, value);
+                    if(value.Contains("#N#"))
+                        value = value.Replace("#N#", "");
+                    currentToken = new Token(tokenData.Key, value,lineNumber);
                     DONE=true;
                     break;
                 }
@@ -53,7 +68,7 @@ namespace KXIParse
             if(currentToken!=null && currentToken.Type==TokenType.Unknown)
                 currentToken.Value+=firstChar;
             else
-                currentToken = new Token(TokenType.Unknown,firstChar);
+                currentToken = new Token(TokenType.Unknown,firstChar,lineNumber);
         }
 
         private void LoadNextLine()

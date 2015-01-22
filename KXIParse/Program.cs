@@ -26,8 +26,8 @@ namespace KXIParse
                 }
             }
 
-            for (var i = 0; i < tokenList.Count; i++)
-                Console.WriteLine("" + i + ": " + tokenList[i].Type + ": " + tokenList[i].Value);
+            foreach(var t in tokenList)
+                Console.WriteLine("" + t.LineNumber + ": " + t.Type + ": " + t.Value);
 
             Console.ReadLine();
         }

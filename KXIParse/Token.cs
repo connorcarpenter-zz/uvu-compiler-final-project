@@ -72,7 +72,7 @@ namespace KXIParse
     {
         public static Dictionary<TokenType, string> Dictionary = new Dictionary<TokenType, string>
         {
-            {TokenType.Comment, "^//[^#]*#N#"},
+            {TokenType.Comment, "^//[^#]*"},
             {TokenType.Number, "^[\\+|\\-]?[0-9]+"},
             {TokenType.Atoi, "^atoi"},
             {TokenType.Bool, "^bool"},
@@ -145,11 +145,13 @@ namespace KXIParse
     {
         public TokenType Type;
         public string Value;
+        public int LineNumber;
 
-        public Token(TokenType type, string value)
+        public Token(TokenType type, string value,int lineNumber)
         {
             Type = type;
             Value = value;
+            LineNumber = lineNumber;
         }
     }
 }
