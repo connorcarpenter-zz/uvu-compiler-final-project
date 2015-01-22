@@ -13,7 +13,7 @@ namespace KXIParse
         {
             file = new System.IO.StreamReader(fileName);
             currentLine = file.ReadLine();
-            NextToken();
+            currentToken = null;
         }
 
         public Token GetToken()
@@ -26,7 +26,7 @@ namespace KXIParse
             LoadNextLine();
 
             //get rid of whitespace and next line symbols, continue
-            currentLine = Regex.Replace(currentLine, "^[\\s#N#]+", "");
+            currentLine = Regex.Replace(currentLine, "^(\\s|(#N#))+", "");
 
             LoadNextLine();
 
@@ -34,7 +34,6 @@ namespace KXIParse
             foreach (var tokenData in TokenDictionary.Get())
             {
                 if (tokenData.Key == TokenType.Unknown) continue;
-                //if (tokenData.Key == TokenType.EOT) continue;
 
                 var value = Regex.Match(currentLine, tokenData.Value).Value;
                 if (!string.IsNullOrEmpty(value))
@@ -51,7 +50,7 @@ namespace KXIParse
             //If you have not found an acceptable character log it as Unknown
             var firstChar = ""+currentLine[0];
             currentLine = currentLine.Remove(0,1);
-            if(currentToken.Type==TokenType.Unknown)
+            if(currentToken!=null && currentToken.Type==TokenType.Unknown)
                 currentToken.Value+=firstChar;
             else
                 currentToken = new Token(TokenType.Unknown,firstChar);

@@ -131,8 +131,8 @@ namespace KXIParse
             {TokenType.Multiply, "^\\*"},
             {TokenType.Divide, "^/"},
             {TokenType.Unknown, ""},
-            {TokenType.EOT, "^[#E#]+"},
-            {TokenType.Identifier, "^[a-zA-Z]{1,80}"}
+            {TokenType.EOT, "^(#E#)+"},
+            {TokenType.Identifier, "^[a-zA-Z][a-zA-Z0-9]{0,79}"}
         };
 
         public static Dictionary<TokenType, string> Get()
@@ -145,7 +145,6 @@ namespace KXIParse
     {
         public TokenType Type;
         public string Value;
-        
 
         public Token(TokenType type, string value)
         {
