@@ -67,7 +67,21 @@ namespace KXIParse
         Divide
     };
 
-    static class TokenDictionary
+    class Token
+    {
+        public TokenType Type;
+        public string Value;
+        public int LineNumber;
+
+        public Token(TokenType type, string value,int lineNumber)
+        {
+            Type = type;
+            Value = value;
+            LineNumber = lineNumber;
+        }
+    }
+
+    static class TokenRegex
     {
         public static Dictionary<TokenType, string> Dictionary = new Dictionary<TokenType, string>
         {
@@ -133,24 +147,5 @@ namespace KXIParse
             {TokenType.EOT, "^(#E#)+"},
             {TokenType.Identifier, "^[a-zA-Z][a-zA-Z0-9]{0,79}"}
         };
-
-        public static Dictionary<TokenType, string> Get()
-        {
-            return Dictionary;
-        }
-    }
-
-    class Token
-    {
-        public TokenType Type;
-        public string Value;
-        public int LineNumber;
-
-        public Token(TokenType type, string value,int lineNumber)
-        {
-            Type = type;
-            Value = value;
-            LineNumber = lineNumber;
-        }
     }
 }
