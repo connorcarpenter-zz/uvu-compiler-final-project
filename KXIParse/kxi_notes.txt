@@ -1,72 +1,61 @@
-﻿states
-
-word - keyword, modifier, identifier, type
-number -
-character - printable, nonprintable (backslashed)
-punctuation - ;, {, }, [, ], (, ), ',', '.'
-comment - // -> end of line
-number - digitz
-numberoroperation - + or -
-operation
-
-
-values
-
-identifier
-comment
-number
-
-atoi
-bool
-class
-char
-cin
-cout
-else
-false
-if
-int
-itoa
-main
-new
-null
-object
-public
-private
-return
-string
-this
-true
-void
-while
-spawn
-lock
-release
-block
-sym
-kxi2015
-protected
-unprotected
-&&
-||
-==
-!=
-<=
->=
-'
-{
-}
-[
-]
-(
-)
-=
-+
--
-;
-,
-.
->
-<
-*
-/
+﻿        Unknown,
+        EOT,
+        Identifier,
+        Comment,
+        Number,
+        Atoi,
+        Bool,
+        Class,
+        Char,
+        Cin,
+        Cout,
+        Else,
+        False,
+        If,
+        Int,
+        Itoa,
+        Main,
+        New,
+        Null,
+        Object,
+        Public,
+        Private,
+        Return,
+        String,
+        This,
+        True,
+        Void,
+        While,
+        Spawn,
+        Lock,
+        Release,
+        Block,
+        Sym,
+        Kxi2015,
+        Protected,
+        Unprotected,
+        And,
+        Or,
+        Equals,
+        NotEquals,
+        LessOrEqual,
+        MoreOrEqual,
+        Extraction,
+        Insertion,
+        Apostrophe,
+        BlockBegin,
+        BlockEnd,
+        ArrayBegin,
+        ArrayEnd,
+        ParenBegin,
+        ParenEnd,
+        Assignment,
+        Add,
+        Subtract,
+        Semicolon,
+        Comma,
+        Period,
+        More,
+        Less,
+        Multiply,
+        Divide
