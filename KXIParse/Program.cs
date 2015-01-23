@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace KXIParse
 {
@@ -6,13 +7,23 @@ namespace KXIParse
     {
         static void Main()
         {
-            var lexer = new Lexer("../../program.kxi");
-            var tokenList = lexer.GenerateTokenList();
-           
-            foreach(var t in tokenList)
-                Console.WriteLine("" + t.LineNumber + ": " + t.Type + ": " + t.Value);
-
+            try
+            {
+                var lexer = new Lexer("../../program.kxi");
+                var tokenList = lexer.GenerateTokenList();
+                Syntaxer.ParseTokenList(tokenList);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
             Console.ReadLine();
+        }
+
+        static void PrintTokenList(IEnumerable<Token> tokenList)
+        {
+            foreach (var t in tokenList)
+                Console.WriteLine("" + t.LineNumber + ": " + t.Type + ": " + t.Value);
         }
     }
 }
