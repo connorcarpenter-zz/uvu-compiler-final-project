@@ -2,7 +2,7 @@
 
 namespace KXIParse
 {
-    internal enum TokenType
+    public enum TokenType
     {
         Unknown,
         EOT,
@@ -64,7 +64,10 @@ namespace KXIParse
         More,
         Less,
         Multiply,
-        Divide
+        Divide,
+        Modifier,
+        Global,
+        Type
     };
 
     class Token
@@ -81,71 +84,101 @@ namespace KXIParse
         }
     }
 
-    static class TokenRegex
+    public class TokenTypeData
     {
-        public static Dictionary<TokenType, string> Dictionary = new Dictionary<TokenType, string>
+        public string Regex { get; set; }
+        public string Name { get; set; }
+        public TokenType Parent { get; set; }
+
+        internal TokenTypeData(string name, string regex,TokenType parent = TokenType.Global)
         {
-            {TokenType.Comment, "^//[^#]*"},
-            {TokenType.Number, "^[\\+|\\-]?[0-9]+"},
-            {TokenType.Atoi, "^atoi"},
-            {TokenType.Bool, "^bool"},
-            {TokenType.Class, "^class"},
-            {TokenType.Char, "^char"},
-            {TokenType.Cin, "^cin"},
-            {TokenType.Cout, "^cout"},
-            {TokenType.Else, "^else"},
-            {TokenType.False, "^false"},
-            {TokenType.If, "^if"},
-            {TokenType.Int, "^int"},
-            {TokenType.Itoa, "^itoa"},
-            {TokenType.Main, "^main"},
-            {TokenType.New, "^new"},
-            {TokenType.Null, "^null"},
-            {TokenType.Object, "^object"},
-            {TokenType.Public, "^public"},
-            {TokenType.Private, "^private"},
-            {TokenType.Return, "^return"},
-            {TokenType.String, "^string"},
-            {TokenType.This, "^this"},
-            {TokenType.True, "^true"},
-            {TokenType.Void, "^void"},
-            {TokenType.While, "^while"},
-            {TokenType.Spawn, "^spawn"},
-            {TokenType.Lock, "^lock"},
-            {TokenType.Release, "^release"},
-            {TokenType.Block, "^block"},
-            {TokenType.Sym, "^sym"},
-            {TokenType.Kxi2015, "^kxi2015"},
-            {TokenType.Protected, "^protected"},
-            {TokenType.Unprotected, "^unprotected"},
-            {TokenType.And, "^&&"},
-            {TokenType.Or, "^||"},
-            {TokenType.Equals, "^=="},
-            {TokenType.NotEquals, "^!="},
-            {TokenType.LessOrEqual, "^<="},
-            {TokenType.MoreOrEqual, "^>="},
-            {TokenType.Extraction, "^<<"},
-            {TokenType.Insertion, "^>>"},
-            {TokenType.Apostrophe, "^'"},
-            {TokenType.BlockBegin, "^{"},
-            {TokenType.BlockEnd, "^}"},
-            {TokenType.ArrayBegin, "^\\["},
-            {TokenType.ArrayEnd, "^\\]"},
-            {TokenType.ParenBegin, "^\\("},
-            {TokenType.ParenEnd, "^\\)"},
-            {TokenType.Assignment, "^="},
-            {TokenType.Add, "^\\+"},
-            {TokenType.Subtract, "^-"},
-            {TokenType.Semicolon, "^;"},
-            {TokenType.Comma, "^,"},
-            {TokenType.Period, "^\\."},
-            {TokenType.More, "^>"},
-            {TokenType.Less, "^<"},
-            {TokenType.Multiply, "^\\*"},
-            {TokenType.Divide, "^/"},
-            {TokenType.Unknown, ""},
-            {TokenType.EOT, "^(#E#)+"},
-            {TokenType.Identifier, "^[a-zA-Z][a-zA-Z0-9]{0,79}"}
+            Name = name;
+            Regex = regex;
+            Parent = parent;
+        }
+    }
+    public static class TokenData
+    {
+        public static bool Equals(TokenType type1, TokenType type2)
+        {
+            var type = type1;
+            while (true)
+            {
+                if (type == type2) return true;
+                if (type == TokenType.Global) return false;
+                type = TokenData.Get()[type].Parent;
+            }
+        }
+
+        public static Dictionary<TokenType, TokenTypeData> Get()
+        {
+            return Dictionary;
+        }
+        private static readonly Dictionary<TokenType, TokenTypeData> Dictionary = new Dictionary<TokenType, TokenTypeData>
+        {
+            {TokenType.Comment, new TokenTypeData("Comment","^//[^#]*")},
+            {TokenType.Number, new TokenTypeData("Number","^[\\+|\\-]?[0-9]+")},
+            {TokenType.Atoi, new TokenTypeData("Atoi","^atoi")},
+            {TokenType.Bool, new TokenTypeData("Bool","^bool",TokenType.Type)},
+            {TokenType.Class, new TokenTypeData("Class","^class")},
+            {TokenType.Char, new TokenTypeData("Char","^char",TokenType.Type)},
+            {TokenType.Cin, new TokenTypeData("Cin","^cin")},
+            {TokenType.Cout, new TokenTypeData("Cout","^cout")},
+            {TokenType.Else, new TokenTypeData("Else","^else")},
+            {TokenType.False, new TokenTypeData("False","^false")},
+            {TokenType.If, new TokenTypeData("If","^if")},
+            {TokenType.Int, new TokenTypeData("Int","^int",TokenType.Type)},
+            {TokenType.Itoa, new TokenTypeData("Itoa","^itoa")},
+            {TokenType.Main, new TokenTypeData("Main","^main")},
+            {TokenType.New, new TokenTypeData("New","^new")},
+            {TokenType.Null, new TokenTypeData("Null","^null")},
+            {TokenType.Object, new TokenTypeData("Object","^object")},
+            {TokenType.Public, new TokenTypeData("Public","^public")},
+            {TokenType.Private, new TokenTypeData("Private","^private")},
+            {TokenType.Return, new TokenTypeData("Return","^return")},
+            {TokenType.String, new TokenTypeData("String","^string")},
+            {TokenType.This, new TokenTypeData("This","^this")},
+            {TokenType.True, new TokenTypeData("True","^true")},
+            {TokenType.Void, new TokenTypeData("Void","^void",TokenType.Type)},
+            {TokenType.While, new TokenTypeData("While","^while")},
+            {TokenType.Spawn, new TokenTypeData("Spawn","^spawn")},
+            {TokenType.Lock, new TokenTypeData("Lock","^lock")},
+            {TokenType.Release, new TokenTypeData("Release","^release")},
+            {TokenType.Block, new TokenTypeData("Block","^block")},
+            {TokenType.Sym, new TokenTypeData("Sym","^sym",TokenType.Type)},
+            {TokenType.Kxi2015, new TokenTypeData("Kxi2015","^kxi2015")},
+            {TokenType.Protected, new TokenTypeData("Protected","^protected",TokenType.Modifier)},
+            {TokenType.Unprotected, new TokenTypeData("Unprotected","^unprotected",TokenType.Modifier)},
+            {TokenType.And, new TokenTypeData("And","^&&")},
+            {TokenType.Or, new TokenTypeData("Or","^||")},
+            {TokenType.Equals, new TokenTypeData("Equals","^==")},
+            {TokenType.NotEquals, new TokenTypeData("NotEquals","^!=")},
+            {TokenType.LessOrEqual, new TokenTypeData("LessOrEqual","^<=")},
+            {TokenType.MoreOrEqual, new TokenTypeData("MoreOrEqual","^>=")},
+            {TokenType.Extraction, new TokenTypeData("Extraction","^<<")},
+            {TokenType.Insertion, new TokenTypeData("Insertion","^>>")},
+            {TokenType.Apostrophe, new TokenTypeData("Apostrophe","^'")},
+            {TokenType.BlockBegin, new TokenTypeData("BlockBegin","^{")},
+            {TokenType.BlockEnd, new TokenTypeData("BlockEnd","^}")},
+            {TokenType.ArrayBegin, new TokenTypeData("ArrayBegin","^\\[")},
+            {TokenType.ArrayEnd, new TokenTypeData("ArrayEnd","^\\]")},
+            {TokenType.ParenBegin, new TokenTypeData("ParenBegin","^\\(")},
+            {TokenType.ParenEnd, new TokenTypeData("ParenEnd","^\\)")},
+            {TokenType.Assignment, new TokenTypeData("Assignment","^=")},
+            {TokenType.Add, new TokenTypeData("Add","^\\+")},
+            {TokenType.Subtract, new TokenTypeData("Subtract","^-")},
+            {TokenType.Semicolon, new TokenTypeData("Semicolon","^;")},
+            {TokenType.Comma, new TokenTypeData("Comma","^,")},
+            {TokenType.Period, new TokenTypeData("Period","^\\.")},
+            {TokenType.More, new TokenTypeData("More","^>")},
+            {TokenType.Less, new TokenTypeData("Less","^<")},
+            {TokenType.Multiply, new TokenTypeData("Multiply","^\\*")},
+            {TokenType.Divide, new TokenTypeData("Divide","^/")},
+            {TokenType.Unknown, new TokenTypeData("Unknown","")},
+            {TokenType.EOT, new TokenTypeData("End of Tokens","^(#E#)+")},
+            {TokenType.Identifier, new TokenTypeData("Identifier","^[a-zA-Z][a-zA-Z0-9]{0,79}")},//Make sure this is at the end of the dictionary so it's regex is evaluated last
+            {TokenType.Modifier,new TokenTypeData("Modifier","")},
+            {TokenType.Type,new TokenTypeData("Type","")},
         };
     }
 }
