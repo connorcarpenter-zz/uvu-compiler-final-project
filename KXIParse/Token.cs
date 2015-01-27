@@ -176,7 +176,7 @@ namespace KXIParse
             {TokenType.Divide, new TokenTypeData("Divide","^/")},
             {TokenType.Unknown, new TokenTypeData("Unknown","")},
             {TokenType.EOT, new TokenTypeData("End of Tokens","^(#E#)+")},
-            {TokenType.Identifier, new TokenTypeData("Identifier","^[a-zA-Z][a-zA-Z0-9]{0,79}")},//Make sure this is at the end of the dictionary so it's regex is evaluated last
+            {TokenType.Identifier, new TokenTypeData("Identifier","^[a-zA-Z][a-zA-Z0-9]{0,79}",TokenType.Type)},//Make sure this is at the end of the dictionary so it's regex is evaluated last
             {TokenType.Modifier,new TokenTypeData("Modifier","")},
             {TokenType.Type,new TokenTypeData("Type","")},
         };

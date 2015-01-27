@@ -8,6 +8,20 @@ namespace KXIParse
     class Syntaxer
     {
         private readonly List<Token> _tokens;
+        private static List<Token> _tokensClone;
+
+        private void InitTokens()
+        {
+            _tokensClone = new List<Token>(_tokens);
+        }
+        private static Token GetToken()
+        {
+            return _tokensClone.First();
+        }
+        private static void NextToken()
+        {
+            _tokensClone.RemoveAt(0);
+        }
 
         public Syntaxer(IEnumerable<Token> tokenList)
         {
@@ -30,10 +44,10 @@ namespace KXIParse
         }
         public List<Symbol> ParseTokens()
         {
+            InitTokens();
             var symbolTable = new List<Symbol>();
-            var tokens = new List<Token>(_tokens);
-
-            var parseSuccess = StartSymbol(tokens);
+            
+            var parseSuccess = StartSymbol();
 
             return symbolTable;
         }
@@ -41,16 +55,27 @@ namespace KXIParse
         private static void EmptyMethod()
         {
         }
-        private static bool Terminal(IList<Token> tokens,TokenType value)
+        private static bool Terminal(TokenType value,bool optional=false)
         {
-            var first = tokens.First();
-            if (!TokenData.Equals(first.Type,value))
-                throw new Exception(string.Format("Error at line {0}: Expected value of type [{1}] , but instead found value of type [{2}] with a value of [{3}]",
-                    first.LineNumber,
-                    TokenData.Get()[value].Name,
-                    TokenData.Get()[first.Type].Name,
-                    first.Value));
-            tokens.RemoveAt(0);
+            var first = _firstToken;
+            if (!TokenData.Equals(first.Type, value))
+            {
+                if (optional)
+                {
+                    return false;
+                }
+                else
+                {
+                    throw new Exception(
+                        string.Format(
+                            "Error at line {0}: Expected value of type [{1}] , but instead found value of type [{2}] with a value of [{3}]",
+                            first.LineNumber,
+                            TokenData.Get()[value].Name,
+                            TokenData.Get()[first.Type].Name,
+                            first.Value));
+                }
+            }
+            RemoveTopToken();
             return true;
         }
         private bool StartSymbol(List<Token> tokens)
@@ -58,13 +83,13 @@ namespace KXIParse
             while (ClassDeclaration(tokens))
                 EmptyMethod();
 
-            Terminal(tokens, TokenType.Void);
-            Terminal(tokens, TokenType.Kxi2015);
-            Terminal(tokens, TokenType.Main);
-            Terminal(tokens, TokenType.ParenBegin);
-            Terminal(tokens, TokenType.ParenEnd);
+            Terminal(TokenType.Void);
+            Terminal(TokenType.Kxi2015);
+            Terminal(TokenType.Main);
+            Terminal(TokenType.ParenBegin);
+            Terminal(TokenType.ParenEnd);
 
-            MethodBody(tokens);
+            MethodBody();
 
             return true;
         }
@@ -73,14 +98,14 @@ namespace KXIParse
         {
             try
             {
-                Terminal(tokens, TokenType.Class);
-                Terminal(tokens, TokenType.Identifier);
-                Terminal(tokens, TokenType.BlockBegin);
+                Terminal(TokenType.Class);
+                Terminal(TokenType.Identifier);
+                Terminal(TokenType.BlockBegin);
 
-                while (ClassMemberDeclaration(tokens))
+                while (ClassMemberDeclaration())
                     EmptyMethod();
 
-                Terminal(tokens, TokenType.BlockEnd);
+                Terminal(TokenType.BlockEnd);
             }
             catch (Exception e)
             {
@@ -90,17 +115,129 @@ namespace KXIParse
             return true;
         }
 
-        private bool ClassMemberDeclaration(List<Token> tokens)
+        private bool ClassMemberDeclaration()
         {
             try
             {
-                Terminal(tokens, TokenType.Modifier);
-                Terminal(tokens, TokenType.Type);
-                Terminal(tokens, TokenType.Identifier);//gotta do something with the symbol table here....
+                Terminal(TokenType.Modifier);
+                Terminal(TokenType.Type);
+                Terminal(TokenType.Identifier);//gotta do something with the symbol table here....
 
-                if(!FieldDeclaration(tokens))
-                    if (!ConstructorDeclaration(tokens))
+                if(!FieldDeclaration())
+                    if (!ConstructorDeclaration())
                         return false;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool FieldDeclaration()
+        {
+            if (!FieldDeclarationValue())
+                if (!FieldDeclarationMethod())
+                    return false;
+
+            return true;
+        }
+
+        private bool FieldDeclarationValue()
+        {
+            try
+            {
+                if (Terminal(TokenType.ArrayBegin, true) != Terminal(TokenType.ArrayEnd, true))
+                    throw new Exception(string.Format(
+                            "Error at line {0}: Expected \"[]\", but found either [ or ] alone",
+                            _firstToken.LineNumber));
+
+                if (Terminal(TokenType.Assignment, true) != AssignmentExpression())
+                    throw new Exception(string.Format(
+                            "Error at line {0}: Expected an assignment expression.",
+                            _firstToken.LineNumber));
+
+                Terminal(TokenType.Semicolon);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool FieldDeclarationMethod()
+        {
+            try
+            {
+                Terminal(TokenType.ParenBegin);
+
+                ParameterList();
+
+                Terminal(TokenType.ParenEnd);
+
+                if (!MethodBody()) return false;
+
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ConstructorDeclaration()
+        {
+            try
+            {
+                Terminal(TokenType.Identifier);
+                Terminal(TokenType.ParenBegin);
+
+                ParameterList();
+
+                Terminal(TokenType.ParenEnd);
+
+                if (!MethodBody()) return false;
+
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ParameterList()
+        {
+            try
+            {
+                if (!Parameter()) return false;
+
+
+
+                if(Terminal(TokenType.Comma,true) != Parameter())
+                    throw new Exception(string.Format(
+                            "Error at line {0}: Expected another parameter",
+                            _firstToken.LineNumber));
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool Parameter()
+        {
+            try
+            {
+                Terminal(TokenType.Type);
+                Terminal(TokenType.Identifier);
             }
             catch (Exception e)
             {
