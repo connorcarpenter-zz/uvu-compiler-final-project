@@ -55,196 +55,47 @@ namespace KXIParse
         private static void EmptyMethod()
         {
         }
-        private static bool Terminal(TokenType value,bool optional=false)
+        private static bool Accept(TokenType value)
         {
-            var first = _firstToken;
-            if (!TokenData.Equals(first.Type, value))
+            if(TokenData.Equals(GetToken(),value)
             {
-                if (optional)
-                {
-                    return false;
-                }
-                else
-                {
-                    throw new Exception(
-                        string.Format(
-                            "Error at line {0}: Expected value of type [{1}] , but instead found value of type [{2}] with a value of [{3}]",
-                            first.LineNumber,
-                            TokenData.Get()[value].Name,
-                            TokenData.Get()[first.Type].Name,
-                            first.Value));
-                }
+                NextToken();
+                return true;
             }
-            RemoveTopToken();
-            return true;
+            return false;
         }
-        private bool StartSymbol(List<Token> tokens)
+        private static bool Expect(TokenType value)
         {
-            while (ClassDeclaration(tokens))
-                EmptyMethod();
+            if (Accept(value))
+                return true;
+            throw new Exception(string.Format(
+                            "Error at line {0}. Expected a token of type: {1}, but found a: {2}",
+                            GetToken().LineNumber,
+                            TokenData.Get()[value].Name,
+                            TokenData.Get()[GetToken().Type].Name
+                            ));
+            return false;
+        }
 
-            Terminal(TokenType.Void);
-            Terminal(TokenType.Kxi2015);
-            Terminal(TokenType.Main);
-            Terminal(TokenType.ParenBegin);
-            Terminal(TokenType.ParenEnd);
+        private bool StartSymbol()
+        {
+            while (Accept(TokenType.Class))
+            {
+                ClassDeclaration();
+            };
+
+            Expect(TokenType.Void);
+            Expect(TokenType.Kxi2015);
+            Expect(TokenType.Main);
+            Expect(TokenType.ParenBegin);
+            Expect(TokenType.ParenEnd);
 
             MethodBody();
 
             return true;
         }
 
-        private bool ClassDeclaration(List<Token> tokens)
-        {
-            try
-            {
-                Terminal(TokenType.Class);
-                Terminal(TokenType.Identifier);
-                Terminal(TokenType.BlockBegin);
-
-                while (ClassMemberDeclaration())
-                    EmptyMethod();
-
-                Terminal(TokenType.BlockEnd);
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-            
-            return true;
-        }
-
-        private bool ClassMemberDeclaration()
-        {
-            try
-            {
-                Terminal(TokenType.Modifier);
-                Terminal(TokenType.Type);
-                Terminal(TokenType.Identifier);//gotta do something with the symbol table here....
-
-                if(!FieldDeclaration())
-                    if (!ConstructorDeclaration())
-                        return false;
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool FieldDeclaration()
-        {
-            if (!FieldDeclarationValue())
-                if (!FieldDeclarationMethod())
-                    return false;
-
-            return true;
-        }
-
-        private bool FieldDeclarationValue()
-        {
-            try
-            {
-                if (Terminal(TokenType.ArrayBegin, true) != Terminal(TokenType.ArrayEnd, true))
-                    throw new Exception(string.Format(
-                            "Error at line {0}: Expected \"[]\", but found either [ or ] alone",
-                            _firstToken.LineNumber));
-
-                if (Terminal(TokenType.Assignment, true) != AssignmentExpression())
-                    throw new Exception(string.Format(
-                            "Error at line {0}: Expected an assignment expression.",
-                            _firstToken.LineNumber));
-
-                Terminal(TokenType.Semicolon);
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool FieldDeclarationMethod()
-        {
-            try
-            {
-                Terminal(TokenType.ParenBegin);
-
-                ParameterList();
-
-                Terminal(TokenType.ParenEnd);
-
-                if (!MethodBody()) return false;
-
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool ConstructorDeclaration()
-        {
-            try
-            {
-                Terminal(TokenType.Identifier);
-                Terminal(TokenType.ParenBegin);
-
-                ParameterList();
-
-                Terminal(TokenType.ParenEnd);
-
-                if (!MethodBody()) return false;
-
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool ParameterList()
-        {
-            try
-            {
-                if (!Parameter()) return false;
 
 
-
-                if(Terminal(TokenType.Comma,true) != Parameter())
-                    throw new Exception(string.Format(
-                            "Error at line {0}: Expected another parameter",
-                            _firstToken.LineNumber));
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool Parameter()
-        {
-            try
-            {
-                Terminal(TokenType.Type);
-                Terminal(TokenType.Identifier);
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
-            return true;
-        }
     }
 }
