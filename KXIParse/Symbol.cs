@@ -8,7 +8,7 @@ namespace KXIParse
         public string SymId { get; set; }
         public string Value { get; set; }
         public string Kind { get; set; }
-        public List<Data> Data { get; set; } 
+        public Data Data { get; set; } 
     }
 
     internal class Data
