@@ -99,7 +99,7 @@ namespace KXIParse
     }
     public static class TokenData
     {
-        public static bool Equals(TokenType type1, TokenType type2)
+        public static bool EqualTo(TokenType type1, TokenType type2)
         {
             var type = type1;
             while (true)
