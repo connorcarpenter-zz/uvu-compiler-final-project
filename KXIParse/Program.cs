@@ -11,6 +11,7 @@ namespace KXIParse
             {
                 var lexer = new Lexer("../../program.kxi");
                 var tokens = lexer.GenerateTokens();
+                //PrintTokenList(tokens);
                 var syntaxer = new Syntaxer(tokens);
                 syntaxer.ParseTokens();
             }

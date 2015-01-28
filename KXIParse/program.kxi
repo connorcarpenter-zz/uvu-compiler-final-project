@@ -8,7 +8,7 @@ class Cat { // This is the Cat class
 		state[count] = value;
 		value = value + count;
 		if(value > max)
-			value -= max;
+			value = value - max;
 		count = count + 1;
 		if(count >= max)
 			count = 0;
@@ -19,7 +19,7 @@ class Cat { // This is the Cat class
 void kxi2015 main() // This is the main function
 {
 	Cat myCat = new Cat();
-	char go = 'a';
+	char go = '\n';
 	while(go != 'x')
 	{
 		myCat.step();

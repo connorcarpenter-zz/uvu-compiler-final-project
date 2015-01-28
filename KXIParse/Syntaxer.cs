@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Xml;
 
 namespace KXIParse
 {
     class Syntaxer
     {
+        private const bool DEBUG = true;
         private readonly List<Token> _tokens;
         private static List<Token> _tokensClone;
 
@@ -22,6 +20,13 @@ namespace KXIParse
         }
         private static void NextToken()
         {
+            if(DEBUG)
+                Console.WriteLine("Line {0}: {1} - {2}", 
+                    GetToken().LineNumber,
+                    TokenData.Get()[GetToken().Type].Name,
+                    GetToken().Value);
+            if(DEBUG && GetToken().LineNumber == 21)//when you're stepping through code, this'll take you straight to where you want to go
+                Console.WriteLine("Arrived");
             _tokensClone.RemoveAt(0);
         }
 
@@ -55,12 +60,11 @@ namespace KXIParse
             return symbolTable;
         }
 
-        private static void EmptyMethod()
+        private static bool Peek(TokenType value,int lookahead = 1)
         {
-        }
-        private static bool Peek(TokenType value)
-        {
-            return TokenData.EqualTo(GetToken().Type, value);
+            if(lookahead==1)
+                return TokenData.EqualTo(GetToken().Type, value);
+            return TokenData.EqualTo(_tokensClone[lookahead - 1].Type, value);
         }
 
         private static bool Accept(TokenType value)
@@ -171,16 +175,16 @@ namespace KXIParse
             MethodBody();
         }
 
-        private void AssignmentExpression()
+        private bool AssignmentExpression()
         {
             if (Accept(TokenType.This))
-                return;
+                return true;
 
             if (Accept(TokenType.New))
             {
                 Expect(TokenType.Type);
                 NewDeclaration();
-                return;
+                return true;
             }
 
             if (Accept(TokenType.Atoi))
@@ -188,7 +192,7 @@ namespace KXIParse
                 Expect(TokenType.ParenBegin);
                 Expression();
                 Expect(TokenType.ParenEnd);
-                return;
+                return true;
             }
 
             if (Accept(TokenType.Itoa))
@@ -196,10 +200,10 @@ namespace KXIParse
                 Expect(TokenType.ParenBegin);
                 Expression();
                 Expect(TokenType.ParenEnd);
-                return;
+                return true;
             }
 
-            Expression();
+            return Expression();
         }
 
         private void ParameterList()
@@ -228,17 +232,24 @@ namespace KXIParse
             {
                 Expect(TokenType.ParenBegin);
 
-                var token = GetToken();
-                if (!Expression())
-                    throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
-
-                token = GetToken();
-                while(Accept(TokenType.Comma))
-                    if (!Expression())
-                        throw new Exception(string.Format("Invalid argument at line {0}",token.LineNumber));
+                if (PeekExpression.Contains(GetToken().Type))
+                    ArgumentList();
 
                 Expect(TokenType.ParenEnd);
             }
+        }
+
+        private void ArgumentList()
+        {
+            var token = GetToken();
+
+            if (!Expression())
+                throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
+
+            token = GetToken();
+            while (Accept(TokenType.Comma))
+                if (!Expression())
+                    throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
         }
 
         private bool Expression()
@@ -253,14 +264,12 @@ namespace KXIParse
                     Expect(TokenType.ParenEnd);
 
                 }
-                else if (Accept(TokenType.Apostrophe))
+                else if (Accept(TokenType.Character))
                 {
-                    Character();
-                    Expect(TokenType.Apostrophe);
                 }
                 else if (Accept(TokenType.Identifier))
                 {
-                    if (Peek(TokenType.ParenBegin))
+                    if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                         FnArrMember();
                     if (Peek(TokenType.Period))
                         MemberRefz();
@@ -283,29 +292,6 @@ namespace KXIParse
             return true;
         }
 
-        private void Character()
-        {
-            var success = false;
-            var token = GetToken();
-            if (Accept(TokenType.Unknown))
-            {
-                var value = token.Value;
-                switch (value.Length)
-                {
-                    case 1:
-                        var intValue = Convert.ToInt32(value[0]);
-                        if (intValue >= 32 && intValue <= 126) success = true;
-                        break;
-                    case 2:
-                        if (value.Equals("\n") || value.Equals("\r") || value.Equals("\t"))
-                            success = true;
-                        break;
-                }
-            }
-            if(!success)
-                throw new Exception(string.Format("Line {0}: Expected valid ascii character",token.LineNumber));
-        }
-
         private void FnArrMember()
         {
             NewDeclaration();
@@ -320,5 +306,150 @@ namespace KXIParse
             if(Peek(TokenType.Period))
                 MemberRefz();
         }
+
+        private bool ExpressionZ()
+        {
+            if (Accept(TokenType.Assignment)) return AssignmentExpression();
+            if (Accept(TokenType.And)) return Expression();
+            if (Accept(TokenType.Or)) return Expression();
+            if (Accept(TokenType.Equals)) return Expression();
+            if (Accept(TokenType.NotEquals)) return Expression();
+            if (Accept(TokenType.LessOrEqual)) return Expression();
+            if (Accept(TokenType.MoreOrEqual)) return Expression();
+            if (Accept(TokenType.Less)) return Expression();
+            if (Accept(TokenType.More)) return Expression();
+            if (Accept(TokenType.Add)) return Expression();
+            if (Accept(TokenType.Subtract)) return Expression();
+            if (Accept(TokenType.Multiply)) return Expression();
+            if (Accept(TokenType.Divide)) return Expression();
+            return false;
+        }
+
+        private void MethodBody()
+        {
+            Expect(TokenType.BlockBegin);
+            while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
+                VariableDeclaration();
+            while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))
+                Statement();
+            Expect(TokenType.BlockEnd);
+        }
+
+        private void VariableDeclaration()
+        {
+            Expect(TokenType.Type);
+            Expect(TokenType.Identifier);
+            if (Accept(TokenType.ArrayBegin))
+                Expect(TokenType.ArrayEnd);
+            if (Accept(TokenType.Assignment))
+                AssignmentExpression();
+            Expect(TokenType.Semicolon);
+        }
+
+        private void Statement()
+        {
+            if (Accept(TokenType.BlockBegin))
+            {
+                while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))
+                    Statement();
+                Expect(TokenType.BlockEnd);
+                return;
+            }
+            if (Accept(TokenType.If))
+            {
+                Expect(TokenType.ParenBegin);
+                Expression();
+                Expect(TokenType.ParenEnd);
+                Statement();
+                if (Accept(TokenType.Else))
+                    Statement();
+                return;
+            }
+            if (Accept(TokenType.While))
+            {
+                Expect(TokenType.ParenBegin);
+                Expression();
+                Expect(TokenType.ParenEnd);
+                Statement();
+                return;
+            }
+            if (Accept(TokenType.Return))
+            {
+                Expression();
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Cout))
+            {
+                Expect(TokenType.Extraction);
+                Expression();
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Cin))
+            {
+                Expect(TokenType.Insertion);
+                Expression();
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Spawn))
+            {
+                Expression();
+                Expect(TokenType.Set);
+                Expect(TokenType.Identifier);
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Block))
+            {
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Lock))
+            {
+                Expect(TokenType.Identifier);
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Accept(TokenType.Release))
+            {
+                Expect(TokenType.Identifier);
+                Expect(TokenType.Semicolon);
+                return;
+            }
+            if (Expression())
+            {
+                Expect(TokenType.Semicolon);
+                return;
+            }
+
+            throw new Exception(string.Format("Line {0}: Expression not valid",GetToken().LineNumber));
+        }
+
+        private static readonly TokenType[] PeekStatement =
+        {
+            TokenType.BlockBegin,
+            TokenType.If,
+            TokenType.While,
+            TokenType.Return,
+            TokenType.Cout,
+            TokenType.Cin,
+            TokenType.Spawn,
+            TokenType.Block,
+            TokenType.Lock,
+            TokenType.Release
+        };
+        private static readonly TokenType[] PeekExpression =
+        {
+            TokenType.ParenBegin,
+            TokenType.True,
+            TokenType.False,
+            TokenType.Null,
+            TokenType.Number,
+            TokenType.Character,
+            TokenType.Identifier
+        };
     }
 }
+
