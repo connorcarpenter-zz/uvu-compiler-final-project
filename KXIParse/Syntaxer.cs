@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Xml;
 
 namespace KXIParse
 {
@@ -37,10 +38,11 @@ namespace KXIParse
             tokens.RemoveAll(s => s.Type == TokenType.Comment);
 
             //throw exception if there's any unknowns
+            /*
             foreach (var t in tokens.Where(t => t.Type == TokenType.Unknown))
                 throw new Exception(string.Format("Unknown symbol on line {0}: {1}",
                                     t.LineNumber,
-                                    t.Value));
+                                    t.Value));*/
             return tokens;
         }
         public List<Symbol> ParseTokens()
@@ -48,7 +50,7 @@ namespace KXIParse
             InitTokens();
             var symbolTable = new List<Symbol>();
             
-            var parseSuccess = StartSymbol();
+            StartSymbol();
 
             return symbolTable;
         }
@@ -226,9 +228,14 @@ namespace KXIParse
             {
                 Expect(TokenType.ParenBegin);
 
-                var backupList = new List<Token>(_tokensClone);
+                var token = GetToken();
                 if (!Expression())
-                    _tokensClone = backupList;//if expression evaluation doesn't work, go back to previous list
+                    throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
+
+                token = GetToken();
+                while(Accept(TokenType.Comma))
+                    if (!Expression())
+                        throw new Exception(string.Format("Invalid argument at line {0}",token.LineNumber));
 
                 Expect(TokenType.ParenEnd);
             }
@@ -237,6 +244,81 @@ namespace KXIParse
         private bool Expression()
         {
             //put expects in a try catch, need to return true true/false here
+            try
+            {
+                if (Accept(TokenType.ParenBegin))
+                {
+                    if (!Expression())
+                        return false;
+                    Expect(TokenType.ParenEnd);
+
+                }
+                else if (Accept(TokenType.Apostrophe))
+                {
+                    Character();
+                    Expect(TokenType.Apostrophe);
+                }
+                else if (Accept(TokenType.Identifier))
+                {
+                    if (Peek(TokenType.ParenBegin))
+                        FnArrMember();
+                    if (Peek(TokenType.Period))
+                        MemberRefz();
+                }
+                else if (!Accept(TokenType.True) &&
+                         !Accept(TokenType.False) &&
+                         !Accept(TokenType.Null) &&
+                         !Accept(TokenType.Number))
+                {
+                    return false;
+                }
+                var backupList = new List<Token>(_tokensClone);
+                if (!ExpressionZ())
+                    _tokensClone = backupList;
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private void Character()
+        {
+            var success = false;
+            var token = GetToken();
+            if (Accept(TokenType.Unknown))
+            {
+                var value = token.Value;
+                switch (value.Length)
+                {
+                    case 1:
+                        var intValue = Convert.ToInt32(value[0]);
+                        if (intValue >= 32 && intValue <= 126) success = true;
+                        break;
+                    case 2:
+                        if (value.Equals("\n") || value.Equals("\r") || value.Equals("\t"))
+                            success = true;
+                        break;
+                }
+            }
+            if(!success)
+                throw new Exception(string.Format("Line {0}: Expected valid ascii character",token.LineNumber));
+        }
+
+        private void FnArrMember()
+        {
+            NewDeclaration();
+        }
+
+        private void MemberRefz()
+        {
+            Expect(TokenType.Period);
+            Expect(TokenType.Identifier);
+            if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
+                FnArrMember();
+            if(Peek(TokenType.Period))
+                MemberRefz();
         }
     }
 }
