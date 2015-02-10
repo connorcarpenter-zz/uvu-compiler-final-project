@@ -53,7 +53,7 @@ namespace KXIParse
                     GetToken().LineNumber,
                     TokenData.Get()[GetToken().Type].Name,
                     GetToken().Value);
-            if(DEBUG && GetToken().LineNumber == 21)//when you're stepping through code, this'll take you straight to where you want to go
+            if(DEBUG && GetToken().LineNumber == 163)//when you're stepping through code, this'll take you straight to where you want to go
                 Console.WriteLine("Arrived");
             _tokensClone.RemoveAt(0);
         }

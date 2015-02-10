@@ -14,15 +14,159 @@ class Cat { // This is the Cat class
 			count = 0;
 		cout << value;
 	}
+
+	unprotected void start(int a, it b, poo c)
+	{
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+	}
+
+	protected char meow()
+	{
+		return 'm';
+	}
+}
+
+class Dog { // This is the Dog class
+	unprotected int count = 0;
+	unprotected int value = 1;
+	protected int max = 10;
+	unprotected int state[] = new int[10];
+	unprotected void step()
+	{
+		int blahblah = 5;
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+		count = count + 1;
+		
+		if(count >= max)
+			count = 0;
+		cout << value;
+	}
+
+	unprotected void start()
+	{
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+	}
+
+	protected char bark()
+	{
+		return 'b';
+	}
+}
+
+class Cow { // This is the Cat class
+	unprotected int count = 0;
+	unprotected int value = 1;
+	protected int max = 10;
+	unprotected int state[] = new int[10];
+	unprotected void step()
+	{
+		int something = 10;
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+		count = count + 1;
+		if(count >= max)
+			count = 0;
+		cout << value;
+	}
+
+	unprotected void start()
+	{
+		int something = 5;
+		state[count] ( value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+	}
+
+	protected char moo(int a, it b, poo c)
+	{
+		return 'o';
+	}
+}
+
+class Horse { // This is the Cat class
+	unprotected int count = 0;
+	unprotected int value = 1;
+	protected int max = 10;
+	unprotected int state[] = new int[10];
+	unprotected void step()
+	{
+		int something = 10;
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+		count = count + 1;
+		if(count >= max)
+			count = 0;
+		cout << value;
+	}
+
+	unprotected void start()
+	{
+		int something = 5;
+		state[count] = value;
+		value = value + count;
+		if(value > max)
+			value = value - max;
+	}
+
+	protected int neigh()
+	{
+		
+	}
+}
+
+class moo {
 }
 
 void kxi2015 main() // This is the main function
 {
 	Cat myCat = new Cat();
+	Dog myDog = new Dog(103,50);
+	Cow myCow = new Cow(30);
 	char go = '\n';
 	while(go != 'x')
 	{
 		myCat.step();
 		cin >> go;
 	}
+	while(go != 'x')
+	{
+		myDog.step();
+		cin >> go;
+	}
+	while(go != 'x')
+	{
+		myCow.step();
+		cin >> go;
+	}
+	while(go != 'x')
+	{
+		myCow.step();
+		cin >> go;
+	}
+
+	while(go != 'x')
+	{
+		
+	}
+	myCat.meow();
+	myDog.bark();
+	myCow.moo();
+
+	cout << myCat.name(4);
+	cout << myDog.name(15);
+	cout << myHorse.name(23,42);
 }
