@@ -24,9 +24,9 @@ namespace KXIParse
 
         public Dictionary<string, Symbol> SyntaxPass()
         {
-            InitTokens();
             Syntaxing = true;
             Semanting = false;
+            InitTokens();
             StartSymbol();
 
             return _syntaxSymbolTable;
@@ -36,9 +36,9 @@ namespace KXIParse
         {
             _semanticSymbolTable = symbolTable;
 
-            InitTokens();
             Syntaxing = false;
             Semanting = true;
+            InitTokens();
             StartSymbol();
         }
 
@@ -149,10 +149,9 @@ namespace KXIParse
         {
             Expect(TokenType.Class);
 
-            var className = "";
+            var className = ClassName();
             if (Syntaxing)
             {
-                className = ClassName();
                 //Put class into symbol table
                 var symId = GenerateSymId("Class");
                 _syntaxSymbolTable.Add(symId,
@@ -670,6 +669,7 @@ namespace KXIParse
             if (GetToken() == null) return;
             if (DEBUG && GetToken().LineNumber == 1)//when you're stepping through code, this'll take you straight to where you want to go
                 Console.WriteLine("Arrived");
+
         }
     }
 }
