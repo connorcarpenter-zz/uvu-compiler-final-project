@@ -13,8 +13,9 @@ namespace KXIParse
                 var tokens = lexer.GenerateTokens();
                 //PrintTokenList(tokens);
                 var syntaxer = new Syntaxer(tokens);
-                var symbolTable = syntaxer.ParseTokens();
+                var symbolTable = syntaxer.SyntaxPass();
                 PrintSymbolTable(symbolTable);
+                //syntaxer.SemanticPass(symbolTable);
             }
             catch(Exception e)
             {
@@ -33,7 +34,7 @@ namespace KXIParse
         static void PrintSymbolTable(Dictionary<string,Symbol> symbolTable)
         {
             Console.WriteLine("\nSymbol Table\n---\n");
-
+ 
             foreach (var s in symbolTable)
             {
                 Console.WriteLine("" + s.Key + "\n" + "---");

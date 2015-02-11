@@ -83,7 +83,7 @@ class Cow { // This is the Cat class
 	unprotected void start()
 	{
 		int something = 5;
-		state[count] ( value;
+		state[count] = value;
 		value = value + count;
 		if(value > max)
 			value = value - max;
@@ -168,5 +168,5 @@ void kxi2015 main() // This is the main function
 
 	cout << myCat.name(4);
 	cout << myDog.name(15);
-	cout << myHorse.name(23,42);
+	cout << myHorse.name(23+42/4+1-251*13);
 }
