@@ -10,18 +10,58 @@ namespace KXIParse
         private readonly List<Token> _tokens;
         private static List<Token> _tokensClone;
         private static List<string> _scope;
-        private static Dictionary<string,Symbol> _symbolTable;
+        private static Dictionary<string,Symbol> _syntaxSymbolTable;
+        private static Dictionary<string, Symbol> _semanticSymbolTable;
+        private bool Syntaxing { get; set; }
+        private bool Semanting { get; set; }
+        
+
+        public Syntaxer(IEnumerable<Token> tokenList)
+        {
+            _tokens = new List<Token>(tokenList);
+
+        }
+
+        public Dictionary<string, Symbol> SyntaxPass()
+        {
+            InitTokens();
+            Syntaxing = true;
+            Semanting = false;
+            StartSymbol();
+
+            return _syntaxSymbolTable;
+        }
+
+        public void SemanticPass(Dictionary<string, Symbol> symbolTable)
+        {
+            _semanticSymbolTable = symbolTable;
+
+            InitTokens();
+            Syntaxing = false;
+            Semanting = true;
+            StartSymbol();
+        }
 
         private void InitTokens()
         {
             _tokensClone = new List<Token>(_tokens);
-            _symbolTable = new Dictionary<string, Symbol>();
-            _scope = new List<string>();
-            _scope.Add("g");
+            if (Syntaxing)
+            {
+                _syntaxSymbolTable = new Dictionary<string, Symbol>();
+                _scope = new List<string> {"g"};
+            }
+            else
+            {
+                _syntaxSymbolTable = null;
+                _scope = null;
+            }
         }
 
         private string GetScopeString()
         {
+            if(!Syntaxing)
+                throw new Exception(string.Format("Error: Getting scope strings outside syntax pass"));
+
             var output = "" + _scope[0] + ".";
             for (var index = 1; index < _scope.Count; index++)
             {
@@ -35,17 +75,21 @@ namespace KXIParse
 
         private string GenerateSymId(string kind)
         {
+            if (!Syntaxing)
+                throw new Exception(string.Format("Error: Getting sym ids outside syntax pass"));
+
             var firstChar = "" + kind.ToUpper()[0];
             var i = 100;
-            while (_symbolTable.ContainsKey(firstChar + i))
+            while (_syntaxSymbolTable.ContainsKey(firstChar + i))
                 i++;
             return firstChar + i;
         }
 
         private static Token GetToken()
         {
-            return _tokensClone.First();
+            return _tokensClone.Count == 0 ? null : _tokensClone.First();
         }
+
         private static void NextToken()
         {
             if(DEBUG)
@@ -53,36 +97,7 @@ namespace KXIParse
                     GetToken().LineNumber,
                     TokenData.Get()[GetToken().Type].Name,
                     GetToken().Value);
-            if(DEBUG && GetToken().LineNumber == 163)//when you're stepping through code, this'll take you straight to where you want to go
-                Console.WriteLine("Arrived");
             _tokensClone.RemoveAt(0);
-        }
-
-        public Syntaxer(IEnumerable<Token> tokenList)
-        {
-            _tokens = CleanTokens(tokenList);
-        }
-
-        private static List<Token> CleanTokens(IEnumerable<Token> tokenList)
-        {
-            var tokens = new List<Token>(tokenList);
-
-            //remove all comments
-            tokens.RemoveAll(s => s.Type == TokenType.Comment);
-
-            //throw exception if there's any unknowns
-            foreach (var t in tokens.Where(t => t.Type == TokenType.Unknown))
-                throw new Exception(string.Format("Unknown symbol on line {0}: {1}",
-                                    t.LineNumber,
-                                    t.Value));
-            return tokens;
-        }
-        public Dictionary<string, Symbol> ParseTokens()
-        {
-            InitTokens();
-            StartSymbol();
-
-            return _symbolTable;
         }
 
         private static bool Peek(TokenType value,int lookahead = 1)
@@ -97,8 +112,10 @@ namespace KXIParse
             if (!TokenData.EqualTo(GetToken().Type, value))
                 return false;
             NextToken();
+            DebugTracking();
             return true;
         }
+
         private static bool Expect(TokenType value)
         {
             if (Accept(value))
@@ -132,23 +149,28 @@ namespace KXIParse
         {
             Expect(TokenType.Class);
 
-            var className = ClassName();
-            //Put class into symbol table
-            var symId = GenerateSymId("Class");
-            _symbolTable.Add(symId,
-                new Symbol()
-                {
-                    Data = null,
-                    Kind = "Class",
-                    Scope = GetScopeString(),
-                    SymId = symId,
-                    Value = className
-                });
+            var className = "";
+            if (Syntaxing)
+            {
+                className = ClassName();
+                //Put class into symbol table
+                var symId = GenerateSymId("Class");
+                _syntaxSymbolTable.Add(symId,
+                    new Symbol()
+                    {
+                        Data = null,
+                        Kind = "Class",
+                        Scope = GetScopeString(),
+                        SymId = symId,
+                        Value = className
+                    });
+            }
 
             Expect(TokenType.BlockBegin);
 
             //go into class scope
-            _scope.Add(className);
+            if(Syntaxing)
+                _scope.Add(className);
 
             //instance variables, ect.
             while (Peek(TokenType.Modifier))
@@ -157,7 +179,8 @@ namespace KXIParse
             }
 
             //go out of scope
-            outScope(className);
+            if (Syntaxing)
+                outScope(className);
 
             Expect(TokenType.BlockEnd);
         }
@@ -171,6 +194,9 @@ namespace KXIParse
 
         private void outScope(string name)
         {
+            if(!Syntaxing)
+                throw new Exception("Error: outscoping in syntax pass");
+
             if (_scope.Last().Equals(name))
             {
                 _scope.RemoveAt(_scope.Count - 1);
@@ -223,21 +249,24 @@ namespace KXIParse
                 Expect(TokenType.Semicolon);
 
                 //add to symbol table
-                var symId = GenerateSymId("Variable");
-                _symbolTable.Add(symId,
-                    new Symbol()
-                    {
-                        Data = new Data()
+                if (Syntaxing)
+                {
+                    var symId = GenerateSymId("Variable");
+                    _syntaxSymbolTable.Add(symId,
+                        new Symbol()
                         {
-                            Type = type,
-                            AccessMod = modifier,
-                            IsArray = isArray,
-                        },
-                        Kind = "ivar",
-                        Scope = GetScopeString(),
-                        SymId = symId,
-                        Value = name
-                    });
+                            Data = new Data()
+                            {
+                                Type = type,
+                                AccessMod = modifier,
+                                IsArray = isArray,
+                            },
+                            Kind = "ivar",
+                            Scope = GetScopeString(),
+                            SymId = symId,
+                            Value = name
+                        });
+                }
             }
             else
             {
@@ -247,35 +276,40 @@ namespace KXIParse
                 if (Peek(TokenType.Type))
                 {
                     //go into method's scope
-                    _scope.Add(name);
+                    if (Syntaxing)
+                        _scope.Add(name);
 
                     //add parameters
                     ParameterList(paramList);
 
-                    //leave
-                    outScope(name);
+                    //leave scope
+                    if (Syntaxing)
+                        outScope(name);
                 }
                 Expect(TokenType.ParenEnd);
 
                 //add method to symbol table
-                var symId = GenerateSymId("Method");
-                _symbolTable.Add(symId,
-                    new Symbol()
-                    {
-                        Kind = "method",
-                        Scope = GetScopeString(),
-                        SymId = symId,
-                        Value = name,
-                        Data = new Data()
+                if (Syntaxing)
+                {
+                    var symId = GenerateSymId("Method");
+                    _syntaxSymbolTable.Add(symId,
+                        new Symbol()
                         {
-                            Type = type,
-                            AccessMod = modifier,
-                            Params = paramList
-                        }
-                    });
+                            Kind = "method",
+                            Scope = GetScopeString(),
+                            SymId = symId,
+                            Value = name,
+                            Data = new Data()
+                            {
+                                Type = type,
+                                AccessMod = modifier,
+                                Params = paramList
+                            }
+                        });
 
-                //go into method's scope
-                _scope.Add(name);
+                    //go into method's scope
+                    _scope.Add(name);
+                }
 
                 MethodBody();
 
@@ -350,23 +384,26 @@ namespace KXIParse
             }
 
             //add to symbol table
-            var symId = GenerateSymId("Parameter");
-            _symbolTable.Add(symId,
-                new Symbol()
-                {
-                    Data = new Data()
+            if (Syntaxing)
+            {
+                var symId = GenerateSymId("Parameter");
+                _syntaxSymbolTable.Add(symId,
+                    new Symbol()
                     {
-                        Type = type,
-                        AccessMod = "protected",
-                        IsArray = isArray,
-                    },
-                    Kind = "param",
-                    Scope = GetScopeString(),
-                    SymId = symId,
-                    Value = name
-                });
-            if(paramList!=null)
-                paramList.Add(symId);
+                        Data = new Data()
+                        {
+                            Type = type,
+                            AccessMod = "protected",
+                            IsArray = isArray,
+                        },
+                        Kind = "param",
+                        Scope = GetScopeString(),
+                        SymId = symId,
+                        Value = name
+                    });
+                if (paramList != null)
+                    paramList.Add(symId);
+            }
         }
 
         private void NewDeclaration()
@@ -470,6 +507,8 @@ namespace KXIParse
             if (Accept(TokenType.Subtract)) return Expression();
             if (Accept(TokenType.Multiply)) return Expression();
             if (Accept(TokenType.Divide)) return Expression();
+            //if (Peek(TokenType.Number) && (GetToken().Value[0].Equals('+') || GetToken().Value[0].Equals('-')))
+            //    return Expression();
             return false;
         }
 
@@ -501,21 +540,24 @@ namespace KXIParse
                 AssignmentExpression();
             Expect(TokenType.Semicolon);
 
-            var symId = GenerateSymId("Local Variable");
-            _symbolTable.Add(symId,
-                new Symbol()
-                {
-                    Data = new Data()
+            if (Syntaxing)
+            {
+                var symId = GenerateSymId("Local Variable");
+                _syntaxSymbolTable.Add(symId,
+                    new Symbol()
                     {
-                        Type = type,
-                        AccessMod = "protected",
-                        IsArray = isArray,
-                    },
-                    Kind = "lvar",
-                    Scope = GetScopeString(),
-                    SymId = symId,
-                    Value = name
-                });
+                        Data = new Data()
+                        {
+                            Type = type,
+                            AccessMod = "protected",
+                            IsArray = isArray,
+                        },
+                        Kind = "lvar",
+                        Scope = GetScopeString(),
+                        SymId = symId,
+                        Value = name
+                    });
+            }
         }
 
         private void Statement()
@@ -622,6 +664,13 @@ namespace KXIParse
             TokenType.Character,
             TokenType.Identifier
         };
+
+        private static void DebugTracking()
+        {
+            if (GetToken() == null) return;
+            if (DEBUG && GetToken().LineNumber == 1)//when you're stepping through code, this'll take you straight to where you want to go
+                Console.WriteLine("Arrived");
+        }
     }
 }
 
