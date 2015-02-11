@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace KXIParse
@@ -36,8 +38,50 @@ namespace KXIParse
                 tokenList.Add(currentToken);
                 lastToken = currentToken;
             }
+
+
+
+            return PostProcess(tokenList);
+        }
+
+        public List<Token> PostProcess(List<Token> tokenList)
+        {
+            //remove all comments
+            tokenList.RemoveAll(s => s.Type == TokenType.Comment);
+
+            //throw exception if there's any unknowns
+            foreach (var t in tokenList.Where(t => t.Type == TokenType.Unknown))
+                throw new Exception(string.Format("Unknown symbol on line {0}: {1}",
+                                    t.LineNumber,
+                                    t.Value));
+
+            //turn back-to-back numbers into addition/subtraction statements
+            Token l = null;
+            for (var index = 0; index < tokenList.Count; index++)
+            {
+                var t = tokenList[index];
+                if (l == null)
+                {
+                    l = t;
+                    continue;
+                }
+
+                if (l.Type == TokenType.Number && t.Type == TokenType.Number &&
+                    (t.Value[0].Equals('+') || t.Value[0].Equals('-'))) 
+                {
+                    if (t.Value[0].Equals('+'))
+                        tokenList.Insert(index, new Token(TokenType.Add, "+", t.LineNumber));
+                    if (t.Value[0].Equals('-'))
+                        tokenList.Insert(index, new Token(TokenType.Subtract, "-", t.LineNumber));
+                    t.Value = t.Value.Remove(0, 1);
+                }
+
+                l = tokenList[index];
+            }
+
             return tokenList;
         }
+
         private Token GetToken()
         {
             return _currentToken;
