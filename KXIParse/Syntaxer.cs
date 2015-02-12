@@ -669,7 +669,6 @@ namespace KXIParse
             if (GetToken() == null) return;
             if (DEBUG && GetToken().LineNumber == 1)//when you're stepping through code, this'll take you straight to where you want to go
                 Console.WriteLine("Arrived");
-
         }
     }
 }
