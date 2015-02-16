@@ -14,8 +14,9 @@ namespace KXIParse
                 //PrintTokenList(tokens);
                 var syntaxer = new Syntaxer(tokens);
                 var symbolTable = syntaxer.SyntaxPass();
-                PrintSymbolTable(symbolTable);
-                //syntaxer.SemanticPass(symbolTable);
+                //PrintSymbolTable(symbolTable);
+                Console.WriteLine("Syntax is done");
+                syntaxer.SemanticPass(symbolTable);
             }
             catch(Exception e)
             {

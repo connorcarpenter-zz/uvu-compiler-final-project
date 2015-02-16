@@ -6,20 +6,19 @@ namespace KXIParse
 {
     class Syntaxer
     {
-        private const bool DEBUG = true;
+        private const bool DEBUG = false;
+        private static Token lastToken;
         private readonly List<Token> _tokens;
         private static List<Token> _tokensClone;
         private static List<string> _scope;
         private static Dictionary<string,Symbol> _syntaxSymbolTable;
-        private static Dictionary<string, Symbol> _semanticSymbolTable;
         private bool Syntaxing { get; set; }
         private bool Semanting { get; set; }
-        
+        private static Semanter _semanter;
 
         public Syntaxer(IEnumerable<Token> tokenList)
         {
             _tokens = new List<Token>(tokenList);
-
         }
 
         public Dictionary<string, Symbol> SyntaxPass()
@@ -34,10 +33,9 @@ namespace KXIParse
 
         public void SemanticPass(Dictionary<string, Symbol> symbolTable)
         {
-            _semanticSymbolTable = symbolTable;
-
             Syntaxing = false;
             Semanting = true;
+            _semanter = new Semanter(this,symbolTable);
             InitTokens();
             StartSymbol();
         }
@@ -45,23 +43,12 @@ namespace KXIParse
         private void InitTokens()
         {
             _tokensClone = new List<Token>(_tokens);
-            if (Syntaxing)
-            {
-                _syntaxSymbolTable = new Dictionary<string, Symbol>();
-                _scope = new List<string> {"g"};
-            }
-            else
-            {
-                _syntaxSymbolTable = null;
-                _scope = null;
-            }
+            _syntaxSymbolTable = new Dictionary<string, Symbol>();
+            _scope = new List<string> {"g"};
         }
 
         private string GetScopeString()
         {
-            if(!Syntaxing)
-                throw new Exception(string.Format("Error: Getting scope strings outside syntax pass"));
-
             var output = "" + _scope[0] + ".";
             for (var index = 1; index < _scope.Count; index++)
             {
@@ -75,9 +62,6 @@ namespace KXIParse
 
         private string GenerateSymId(string kind)
         {
-            if (!Syntaxing)
-                throw new Exception(string.Format("Error: Getting sym ids outside syntax pass"));
-
             var firstChar = "" + kind.ToUpper()[0];
             var i = 100;
             while (_syntaxSymbolTable.ContainsKey(firstChar + i))
@@ -111,6 +95,7 @@ namespace KXIParse
         {
             if (!TokenData.EqualTo(GetToken().Type, value))
                 return false;
+            lastToken = GetToken();
             NextToken();
             DebugTracking();
             return true;
@@ -168,8 +153,7 @@ namespace KXIParse
             Expect(TokenType.BlockBegin);
 
             //go into class scope
-            if(Syntaxing)
-                _scope.Add(className);
+            _scope.Add(className);
 
             //instance variables, ect.
             while (Peek(TokenType.Modifier))
@@ -178,8 +162,7 @@ namespace KXIParse
             }
 
             //go out of scope
-            if (Syntaxing)
-                outScope(className);
+            outScope(className);
 
             Expect(TokenType.BlockEnd);
         }
@@ -193,9 +176,6 @@ namespace KXIParse
 
         private void outScope(string name)
         {
-            if(!Syntaxing)
-                throw new Exception("Error: outscoping in syntax pass");
-
             if (_scope.Last().Equals(name))
             {
                 _scope.RemoveAt(_scope.Count - 1);
@@ -275,15 +255,13 @@ namespace KXIParse
                 if (Peek(TokenType.Type))
                 {
                     //go into method's scope
-                    if (Syntaxing)
-                        _scope.Add(name);
+                    _scope.Add(name);
 
                     //add parameters
                     ParameterList(paramList);
 
                     //leave scope
-                    if (Syntaxing)
-                        outScope(name);
+                    outScope(name);
                 }
                 Expect(TokenType.ParenEnd);
 
@@ -453,8 +431,10 @@ namespace KXIParse
                 }
                 else if (Accept(TokenType.Identifier))
                 {
+                    if(Semanting)_semanter.iPush(lastToken.Value);
                     if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                         FnArrMember();
+                    if (Semanting) _semanter.iExist(GetScopeString(),lastToken.LineNumber);
                     if (Peek(TokenType.Period))
                         MemberRefz();
                 }
@@ -493,21 +473,58 @@ namespace KXIParse
 
         private bool ExpressionZ()
         {
-            if (Accept(TokenType.Assignment)) return AssignmentExpression();
-            if (Accept(TokenType.And)) return Expression();
-            if (Accept(TokenType.Or)) return Expression();
-            if (Accept(TokenType.Equals)) return Expression();
-            if (Accept(TokenType.NotEquals)) return Expression();
-            if (Accept(TokenType.LessOrEqual)) return Expression();
-            if (Accept(TokenType.MoreOrEqual)) return Expression();
-            if (Accept(TokenType.Less)) return Expression();
-            if (Accept(TokenType.More)) return Expression();
-            if (Accept(TokenType.Add)) return Expression();
-            if (Accept(TokenType.Subtract)) return Expression();
-            if (Accept(TokenType.Multiply)) return Expression();
-            if (Accept(TokenType.Divide)) return Expression();
-            //if (Peek(TokenType.Number) && (GetToken().Value[0].Equals('+') || GetToken().Value[0].Equals('-')))
-            //    return Expression();
+            if (Accept(TokenType.Assignment))
+            {
+                if (Semanting)
+                    _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
+                return AssignmentExpression();
+            }
+            if (Accept(TokenType.And) || Accept(TokenType.Or) || Accept(TokenType.Equals) ||
+                Accept(TokenType.NotEquals) || Accept(TokenType.LessOrEqual) || Accept(TokenType.MoreOrEqual) ||
+                Accept(TokenType.Less) || Accept(TokenType.More) || Accept(TokenType.Add) ||
+                Accept(TokenType.Subtract) || Accept(TokenType.Multiply) || Accept(TokenType.Divide))
+            {
+                if (Semanting)
+                {
+                    switch (lastToken.Type)
+                    {
+                        case TokenType.And:
+                            _semanter.oPush(Semanter.Operator.And,lastToken.LineNumber);
+                            break;
+                        case TokenType.Or:
+                            _semanter.oPush(Semanter.Operator.Or, lastToken.LineNumber);
+                            break;
+                        case TokenType.Equals:
+                            _semanter.oPush(Semanter.Operator.Equals, lastToken.LineNumber);
+                            break;
+                        case TokenType.NotEquals:
+                            _semanter.oPush(Semanter.Operator.NotEquals, lastToken.LineNumber);
+                            break;
+                        case TokenType.LessOrEqual:
+                            _semanter.oPush(Semanter.Operator.LessOrEqual, lastToken.LineNumber);
+                            break;
+                        case TokenType.MoreOrEqual:
+                            _semanter.oPush(Semanter.Operator.MoreOrEqual, lastToken.LineNumber);
+                            break;
+                        case TokenType.Less:
+                            _semanter.oPush(Semanter.Operator.Less, lastToken.LineNumber);
+                            break;
+                        case TokenType.Add:
+                            _semanter.oPush(Semanter.Operator.Add, lastToken.LineNumber);
+                            break;
+                        case TokenType.Subtract:
+                            _semanter.oPush(Semanter.Operator.Subtract, lastToken.LineNumber);
+                            break;
+                        case TokenType.Multiply:
+                            _semanter.oPush(Semanter.Operator.Multiply, lastToken.LineNumber);
+                            break;
+                        case TokenType.Divide:
+                            _semanter.oPush(Semanter.Operator.Divide, lastToken.LineNumber);
+                            break;
+                    }
+                }
+                return Expression();
+            }
             return false;
         }
 
@@ -634,6 +651,8 @@ namespace KXIParse
             if (Expression())
             {
                 Expect(TokenType.Semicolon);
+                if(Semanting)
+                    _semanter.EOE(lastToken.LineNumber);
                 return;
             }
 
@@ -667,9 +686,11 @@ namespace KXIParse
         private static void DebugTracking()
         {
             if (GetToken() == null) return;
-            if (DEBUG && GetToken().LineNumber == 1)//when you're stepping through code, this'll take you straight to where you want to go
+            if(DEBUG)
+            if (GetToken().LineNumber == 8)//when you're stepping through code, this'll take you straight to where you want to go
                 Console.WriteLine("Arrived");
         }
     }
+
 }
 
