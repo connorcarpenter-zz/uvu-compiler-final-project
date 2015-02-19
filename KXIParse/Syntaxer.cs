@@ -449,8 +449,9 @@ namespace KXIParse
                 if (!ExpressionZ())
                     _tokensClone = backupList;
             }
-            catch
+            catch (Exception e)
             {
+                Console.WriteLine(e.Message);
                 return false;
             }
             return true;
@@ -465,6 +466,8 @@ namespace KXIParse
         {
             Expect(TokenType.Period);
             Expect(TokenType.Identifier);
+            if (Semanting) _semanter.iPush(lastToken.Value);
+            if (Semanting) _semanter.rExist(lastToken.LineNumber);
             if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                 FnArrMember();
             if(Peek(TokenType.Period))

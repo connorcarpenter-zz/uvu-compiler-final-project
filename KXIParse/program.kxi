@@ -1,9 +1,11 @@
+class Cat
+{
+	unprotected int paws = 4;
+}
+
 void kxi2015 main()
 {
-	int x = 5;
-	int y = 7;
-	int g = 9;
-	int f = 3;
-	int k = 2;
-	x = y * g + f / k;
+	Cat a = new Cat();
+	Cat b = new Cat();
+	a.paws = b.paws;
 }

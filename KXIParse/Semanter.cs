@@ -77,6 +77,26 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("iExist");
         }
 
+        public void rExist(int lineNumber) //member reference identifier exists
+        {
+            var childId = _recordStack.Pop();
+            var parentId = _recordStack.Pop();
+            var symbol = (from s in _symbolTable where s.Value.Scope == "g."+parentId.LinkedSymbol.Data.Type &&
+                              s.Value.Value == childId.Value &&
+                              s.Value.Data.AccessMod.Equals("unprotected")
+                          select s.Value).FirstOrDefault();
+            if (symbol != null)
+            {
+                childId.LinkedSymbol = symbol;
+                _recordStack.Push(childId);
+            }
+            else
+            {
+                throw new Exception(string.Format("Error at line {0}: Identifier {2}.{1} does not exist", lineNumber, childId.Value,parentId.Value));
+            }
+            if (DEBUG) Console.WriteLine("rExist");
+        }
+
         public void oPush(Operator o,int lineNumber) //operator push
         {
             if (_opPriority.ContainsKey(o) && _opPriority.ContainsKey(_operatorStack.Peek()))
