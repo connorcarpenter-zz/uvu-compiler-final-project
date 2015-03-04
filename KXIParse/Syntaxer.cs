@@ -403,9 +403,6 @@ namespace KXIParse
 
         private void ArgumentList()
         {
-            if(Semanting)
-                _semanter.BAL();
-
             var token = GetToken();
 
             if (!Expression())
@@ -418,15 +415,6 @@ namespace KXIParse
                     _semanter.commaPop();
                 if (!Expression())
                     throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
-            }
-
-            if (Semanting)
-            {
-                if (Peek(TokenType.ParenEnd))
-                {
-                    _semanter.parenBeginPop();
-                    _semanter.EAL();
-                }
             }
         }
 
@@ -485,12 +473,21 @@ namespace KXIParse
                 Expect(TokenType.ParenBegin);
 
                 if (Semanting)
+                {
                     _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
+                    _semanter.BAL();
+                }
 
                 if (PeekExpression.Contains(GetToken().Type))
                     ArgumentList();
 
                 Expect(TokenType.ParenEnd);
+
+                if (Semanting)
+                {
+                    _semanter.parenBeginPop();
+                    _semanter.EAL();
+                }
 
                 if(Semanting)
                     _semanter.func();
