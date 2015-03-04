@@ -1,68 +1,17 @@
-﻿        Unknown,
-        EOT,
-        Identifier,
-        Comment,
-        Number,
-        Atoi,
-        Bool,
-        Class,
-        Char,
-        Cin,
-        Cout,
-        Else,
-        False,
-        If,
-        Int,
-        Itoa,
-        Main,
-        New,
-        Null,
-        Object,
-        Public,
-        Private,
-        Return,
-        String,
-        This,
-        True,
-        Void,
-        While,
-        Spawn,
-        Lock,
-        Release,
-        Block,
-        Sym,
-        Kxi2015,
-        Protected,
-        Unprotected,
-        And,
-        Or,
-        Equals,
-        NotEquals,
-        LessOrEqual,
-        MoreOrEqual,
-        Extraction,
-        Insertion,
-        Apostrophe,
-        BlockBegin,
-        BlockEnd,
-        ArrayBegin,
-        ArrayEnd,
-        ParenBegin,
-        ParenEnd,
-        Assignment,
-        Add,
-        Subtract,
-        Semicolon,
-        Comma,
-        Period,
-        More,
-        Less,
-        Multiply,
-        Divide
+﻿
+class Cat
+{
+	unprotected int paws = 4;
+	unprotected int GetPaws(int a, int b)
+	{
+		return paws + a + b;
+	}
+}
 
-
-		---
-
-		List<Data> Data
-
-			
+void kxi2015 main()
+{
+	Cat a = new Cat();
+	int b = 4;
+	int c = 5;
+	int d = a.GetPaws(b,c)+b*c;
+}

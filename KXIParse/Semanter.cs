@@ -14,7 +14,8 @@ namespace KXIParse
         public enum Operator
         {
             And,Or,Equals,NotEquals,LessOrEqual,MoreOrEqual,
-            Less,More,Add,Subtract,Multiply,Divide,Assignment
+            Less,More,Add,Subtract,Multiply,Divide,Assignment,
+            ParenBegin
         }
 
         private static Dictionary<Operator, int> _opPriority = new Dictionary<Operator, int>
@@ -25,13 +26,18 @@ namespace KXIParse
         private static Stack<Record> _recordStack;
         public enum RecordType
         {
-            Identifier,Temporary
+            Identifier,Temporary,
+            BAL,
+            EAL,
+            Func
         }
         internal class Record
         {
             public RecordType Type { get; set; }
             public string Value { get; set; }
             public Symbol LinkedSymbol { get; set; }
+            public Stack<Record> ArgumentList { get; set; }
+            public object TempVariable { get; set; }//apparently this will be needed in icode for ref and id records
 
             public Record(RecordType type, string value,Symbol symbol)
             {
@@ -61,6 +67,52 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("iPush: "+iname);
         }
 
+        public void BAL() //beginning of array push
+        {
+            _recordStack.Push(new Record(RecordType.BAL,null,null));
+            if (DEBUG) Console.WriteLine("BAL");
+        }
+
+        public void EAL() //ending of array pop
+        {
+            var endOfArgumentListRecord = new Record(RecordType.EAL, null, null);
+            endOfArgumentListRecord.ArgumentList = new Stack<Record>();
+            while (true)
+            {
+                var record = _recordStack.Pop();
+                if (record.Type == RecordType.BAL)
+                    break;
+                endOfArgumentListRecord.ArgumentList.Push(record);
+            }
+            _recordStack.Push(endOfArgumentListRecord);
+            if (DEBUG) Console.WriteLine("EAL");
+        }
+
+        public void commaPop() //comma pop
+        {
+            if (DEBUG) Console.WriteLine("#,");
+        }
+
+        public void parenBeginPop() //go through the operator stack until you pop parenBegin
+        {
+            while (true)
+            {
+                if (_operatorStack.Pop() == Operator.ParenBegin)
+                    break;
+            }
+            if (DEBUG) Console.WriteLine("#)");
+        }
+
+        public void func() //function
+        {
+            var argumentList = _recordStack.Pop();
+            var functionName = _recordStack.Pop();
+            functionName.Type = RecordType.Func;
+            functionName.ArgumentList = argumentList.ArgumentList;
+            _recordStack.Push(functionName);
+            if (DEBUG) Console.WriteLine("Func: "+functionName.Value);
+        }
+
         public void iExist(string scope,int lineNumber) //identifier exists
         {
             var identifier = _recordStack.Pop();
@@ -72,7 +124,7 @@ namespace KXIParse
             }
             else
             {
-                throw new Exception(string.Format("Error at line {0}: Identifier {1} does not exist", lineNumber,identifier.Value));
+                throw new Exception(string.Format("Semantic error at line {0}: Identifier {1} does not exist", lineNumber,identifier.Value));
             }
             if (DEBUG) Console.WriteLine("iExist");
         }
@@ -92,7 +144,7 @@ namespace KXIParse
             }
             else
             {
-                throw new Exception(string.Format("Error at line {0}: Identifier {2}.{1} does not exist", lineNumber, childId.Value,parentId.Value));
+                throw new Exception(string.Format("Semantic error at line {0}: Identifier {2}.{1} does not exist", lineNumber, childId.Value, parentId.Value));
             }
             if (DEBUG) Console.WriteLine("rExist");
         }
@@ -108,19 +160,21 @@ namespace KXIParse
 
         private void evalOp(int lineNumber)
         {
-            switch (_operatorStack.Pop())
+            while (_operatorStack.Count > 0)
             {
-                case Operator.Assignment:
+                switch (_operatorStack.Pop())
+                {
+                    case Operator.Assignment:
                     {
                         var i1 = _recordStack.Pop();
                         var i2 = _recordStack.Pop();
-                        checkRecordsAreSameType(i1, i2,lineNumber);
+                        checkRecordsAreSameType(i1, i2, lineNumber);
                     }
-                    break;
-                case Operator.Add:
-                case Operator.Subtract:
-                case Operator.Multiply:
-                case Operator.Divide:
+                        break;
+                    case Operator.Add:
+                    case Operator.Subtract:
+                    case Operator.Multiply:
+                    case Operator.Divide:
                     {
                         var i1 = _recordStack.Pop();
                         var i2 = _recordStack.Pop();
@@ -128,17 +182,18 @@ namespace KXIParse
                         var result = new Record(
                             RecordType.Temporary,
                             i1.Value + "." + i2.Value,
-                            new Symbol {Data = new Data{Type = i1.LinkedSymbol.Data.Type}});
+                            new Symbol {Data = new Data {Type = i1.LinkedSymbol.Data.Type}});
                         _recordStack.Push(result);
                     }
-                    break;
+                        break;
+                }
             }
         }
 
         private static void checkRecordsAreSameType(Record r1,Record r2,int lineNumber)
         {
             if(r1.LinkedSymbol.Data.Type != r2.LinkedSymbol.Data.Type)
-                            throw new Exception(string.Format("Error at line {0}: Trying to perform operation of variable '{1}' of type '{2}' to variable '{3}' of type '{4}'",
+                throw new Exception(string.Format("Semantic error at line {0}: Trying to perform operation of variable '{1}' of type '{2}' to variable '{3}' of type '{4}'",
                                 lineNumber,
                                 r1.Value, r1.LinkedSymbol.Data.Type,
                                 r2.Value, r2.LinkedSymbol.Data.Type));

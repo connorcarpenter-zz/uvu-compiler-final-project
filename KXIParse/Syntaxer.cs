@@ -106,7 +106,7 @@ namespace KXIParse
             if (Accept(value))
                 return true;
             throw new Exception(string.Format(
-                            "Error at line {0}. Expected a token of type: {1}, but found a: {2}",
+                            "Syntax error at line {0}. Expected a token of type: {1}, but found a: {2}",
                             GetToken().LineNumber,
                             TokenData.Get()[value].Name,
                             TokenData.Get()[GetToken().Type].Name
@@ -183,7 +183,7 @@ namespace KXIParse
             else
             {
                 var t = GetToken();
-                throw new Exception(string.Format("Error at line {0}: scope tracking got out of sync somehow?",
+                throw new Exception(string.Format("Syntax error at line {0}: scope tracking got out of sync somehow?",
                                     t.LineNumber));
             }
         }
@@ -283,10 +283,10 @@ namespace KXIParse
                                 Params = paramList
                             }
                         });
-
-                    //go into method's scope
-                    _scope.Add(name);
                 }
+
+                //go into method's scope
+                _scope.Add(name);
 
                 MethodBody();
 
@@ -403,6 +403,9 @@ namespace KXIParse
 
         private void ArgumentList()
         {
+            if(Semanting)
+                _semanter.BAL();
+
             var token = GetToken();
 
             if (!Expression())
@@ -410,8 +413,21 @@ namespace KXIParse
 
             token = GetToken();
             while (Accept(TokenType.Comma))
+            {
+                if (Semanting)
+                    _semanter.commaPop();
                 if (!Expression())
                     throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
+            }
+
+            if (Semanting)
+            {
+                if (Peek(TokenType.ParenEnd))
+                {
+                    _semanter.parenBeginPop();
+                    _semanter.EAL();
+                }
+            }
         }
 
         private bool Expression()
@@ -424,14 +440,14 @@ namespace KXIParse
                     if (!Expression())
                         return false;
                     Expect(TokenType.ParenEnd);
-
                 }
                 else if (Accept(TokenType.Character))
                 {
                 }
                 else if (Accept(TokenType.Identifier))
                 {
-                    if(Semanting)_semanter.iPush(lastToken.Value);
+                    if(Semanting)
+                        _semanter.iPush(lastToken.Value);
                     if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                         FnArrMember();
                     if (Semanting) _semanter.iExist(GetScopeString(),lastToken.LineNumber);
@@ -459,7 +475,26 @@ namespace KXIParse
 
         private void FnArrMember()
         {
-            NewDeclaration();
+            if (Accept(TokenType.ArrayBegin))
+            {
+                Expression();
+                Expect(TokenType.ArrayEnd);
+            }
+            else
+            {
+                Expect(TokenType.ParenBegin);
+
+                if (Semanting)
+                    _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
+
+                if (PeekExpression.Contains(GetToken().Type))
+                    ArgumentList();
+
+                Expect(TokenType.ParenEnd);
+
+                if(Semanting)
+                    _semanter.func();
+            }
         }
 
         private void MemberRefz()
@@ -467,10 +502,12 @@ namespace KXIParse
             Expect(TokenType.Period);
             Expect(TokenType.Identifier);
             if (Semanting) _semanter.iPush(lastToken.Value);
-            if (Semanting) _semanter.rExist(lastToken.LineNumber);
+            
             if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                 FnArrMember();
-            if(Peek(TokenType.Period))
+            if (Semanting)
+                _semanter.rExist(lastToken.LineNumber);
+            if (Peek(TokenType.Period))
                 MemberRefz();
         }
 
