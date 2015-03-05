@@ -156,7 +156,7 @@ namespace KXIParse
             _scope.Add(className);
 
             //instance variables, ect.
-            while (Peek(TokenType.Modifier))
+            while (Peek(TokenType.Modifier) || Peek(TokenType.Identifier))
             {
                 ClassMemberDeclaration();
             }
@@ -297,13 +297,39 @@ namespace KXIParse
 
         private void ConstructorDeclaration()
         {
-            ClassName();
+            var name = ClassName();
+
+            var paramList = new List<string>();
+
             Expect(TokenType.ParenBegin);
             if (Peek(TokenType.Type))
             {
-                ParameterList();
+                //go into method's scope
+                _scope.Add(name);
+
+                //add parameters
+                ParameterList(paramList);
+
+                //leave scope
+                outScope(name);
             }
             Expect(TokenType.ParenEnd);
+
+            //add to symbol table
+            if (Syntaxing)
+            {
+                var symId = GenerateSymId("Constructor");
+                _syntaxSymbolTable.Add(symId,
+                    new Symbol()
+                    {
+                        Data = new Data {Params = paramList,Type = name},
+                        Kind = "Constructor",
+                        Scope = GetScopeString(),
+                        SymId = symId,
+                        Value = name
+                    });
+            }
+
             MethodBody();
         }
 
@@ -315,7 +341,10 @@ namespace KXIParse
             if (Accept(TokenType.New))
             {
                 Expect(TokenType.Type);
+                if (Semanting)
+                    _semanter.tPush(lastToken.Value);
                 NewDeclaration();
+                
                 return true;
             }
 
@@ -394,10 +423,23 @@ namespace KXIParse
             {
                 Expect(TokenType.ParenBegin);
 
+                if (Semanting)
+                {
+                    _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
+                    _semanter.BAL();
+                }
+
                 if (PeekExpression.Contains(GetToken().Type))
                     ArgumentList();
 
                 Expect(TokenType.ParenEnd);
+
+                if (Semanting)
+                {
+                    _semanter.parenBeginPop();
+                    _semanter.EAL();
+                    _semanter.newObj(GetScopeString(),lastToken.LineNumber);
+                }
             }
         }
 
@@ -431,6 +473,7 @@ namespace KXIParse
                 }
                 else if (Accept(TokenType.Character))
                 {
+                    if (Semanting) _semanter.lPush(lastToken.Type);
                 }
                 else if (Accept(TokenType.Identifier))
                 {
@@ -442,11 +485,12 @@ namespace KXIParse
                     if (Peek(TokenType.Period))
                         MemberRefz();
                 }
-                else if (!Accept(TokenType.True) &&
-                         !Accept(TokenType.False) &&
-                         !Accept(TokenType.Null) &&
-                         !Accept(TokenType.Number))
+                else if (Accept(TokenType.True) ||
+                         Accept(TokenType.False) ||
+                         Accept(TokenType.Null) ||
+                         Accept(TokenType.Number))
                 {
+                    if (Semanting) _semanter.lPush(lastToken.Type);
                     return false;
                 }
                 var backupList = new List<Token>(_tokensClone);
@@ -580,6 +624,12 @@ namespace KXIParse
             var type = GetToken().Value;
             Expect(TokenType.Type);
 
+            if (Semanting)
+            {
+                _semanter.tPush(lastToken.Value);
+                _semanter.tExist(lastToken.LineNumber);
+            }
+
             var name = GetToken().Value;
             Expect(TokenType.Identifier);
 
@@ -589,8 +639,20 @@ namespace KXIParse
                 Expect(TokenType.ArrayEnd);
                 isArray = true;
             }
+
+            if (Semanting)
+                _semanter.vPush(GetScopeString(), name,isArray);
+
             if (Accept(TokenType.Assignment))
+            {
+                if(Semanting)
+                    _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
+
                 AssignmentExpression();
+
+                if (Semanting)
+                    _semanter.EOE(lastToken.LineNumber);
+            }
             Expect(TokenType.Semicolon);
 
             if (Syntaxing)

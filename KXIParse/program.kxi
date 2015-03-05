@@ -1,17 +1,13 @@
 class Cat
 {
-	unprotected int paws;
-
-	unprotected Cat GetKitten()
+	Cat(int i,int j)
 	{
-		Cat a = new Cat();
-		return a;
 	}
 }
 
 void kxi2015 main()
 {
-Cat a = new Cat();
-int b = 0;
-a.GetKitten().GetKitten().paws=b;
+int b = 1;
+int c = 2;
+Cat a = new Cat(b,c);
 }
