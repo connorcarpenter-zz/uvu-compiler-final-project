@@ -9,20 +9,23 @@ namespace KXIParse
     class Semanter
     {
         private const bool DEBUG = true;
-        private Syntaxer syntaxer;
         private static Dictionary<string, Symbol> _symbolTable;
         private static Stack<Operator> _operatorStack;
         public enum Operator
         {
             And,Or,Equals,NotEquals,LessOrEqual,MoreOrEqual,
             Less,More,Add,Subtract,Multiply,Divide,Assignment,
-            ParenBegin
+            ParenBegin,
+            ArrayBegin,
+            Comma
         }
 
-        private static Dictionary<Operator, int> _opPriority = new Dictionary<Operator, int>
+        private static Dictionary<Operator, int> _opPriority = new Dictionary<Operator, int> //this is golf rules here boys
             {
                 { Operator.Multiply, 3 }, { Operator.Divide, 3 },
-                { Operator.Add, 2 }, { Operator.Subtract, 2 } 
+                { Operator.Add, 2 }, { Operator.Subtract, 2 },
+                { Operator.Less, 1 }, { Operator.More, 1 },{ Operator.LessOrEqual, 1 }, { Operator.MoreOrEqual, 1 },
+                { Operator.ParenBegin, 0 }, { Operator.ArrayBegin, 0 } , { Operator.Assignment, -1 } , {Operator.Comma,0}
             };
         private static Stack<Record> _recordStack;
         public enum RecordType
@@ -30,7 +33,8 @@ namespace KXIParse
             Identifier,Temporary,BAL,EAL,Func,Type,
             Variable,
             New,
-            Literal
+            Literal,
+            NewArray
         }
 
         public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym" };
@@ -55,7 +59,6 @@ namespace KXIParse
         {
             _operatorStack = new Stack<Semanter.Operator>();
             _recordStack = new Stack<Record>();
-            syntaxer = s;
             _symbolTable = st;
         }
 
@@ -86,19 +89,55 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("EAL");
         }
 
-        public void commaPop() //comma pop
+        public void commaPop(int lineNumber) //comma pop
         {
+            evalOp(lineNumber);
             if (DEBUG) Console.WriteLine("#,");
         }
 
-        public void parenBeginPop() //go through the operator stack until you pop parenBegin
+        public void newArray(int lineNumber) //new array, check that operator is an int
+        {
+            var index = _recordStack.Pop();
+            if(!GetCompareString(index).Equals("int"))
+                throw new Exception(string.Format("Semantic Error at line {0}: Cannot use a {1} as an array indexer, need an int",
+                    lineNumber, index.LinkedSymbol.Data.Type));
+            var typeSar = _recordStack.Pop();
+            //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
+            typeSar.Type = RecordType.NewArray;
+            _recordStack.Push(typeSar);
+            if (DEBUG) Console.WriteLine("newArray");
+        }
+
+        public void parenEnd(int lineNumber) //go through the operator stack until you pop parenBegin
         {
             while (true)
             {
-                if (_operatorStack.Pop() == Operator.ParenBegin)
+                var nextOp = _operatorStack.Peek();
+                if (nextOp == Operator.ParenBegin)
+                {
+                    _operatorStack.Pop();
                     break;
+                }
+                evalOp(lineNumber);
             }
             if (DEBUG) Console.WriteLine("#)");
+        }
+
+        public void arrayEnd(int lineNumber)
+        {
+            while (true)
+            {
+                var nextOp = _operatorStack.Peek();
+                if (nextOp == Operator.ArrayBegin)
+                {
+                    _operatorStack.Pop();
+                    break;
+                }
+                evalOp(lineNumber);
+            }
+
+
+            if (DEBUG) Console.WriteLine("#]");
         }
 
         public void func() //function
@@ -109,6 +148,13 @@ namespace KXIParse
             functionName.ArgumentList = argumentList.ArgumentList;
             _recordStack.Push(functionName);
             if (DEBUG) Console.WriteLine("Func: "+functionName.Value);
+        }
+
+        public void spawn(string scope, int lineNumber)
+        {
+            var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist
+            var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
+            if (DEBUG) Console.WriteLine("spawn: " + refSar.Value);
         }
 
         public void iPush(string iname) //identifier push
@@ -155,9 +201,13 @@ namespace KXIParse
 
         public void oPush(Operator o,int lineNumber) //operator push
         {
-            if (_opPriority.ContainsKey(o) && _opPriority.ContainsKey(_operatorStack.Peek()))
-                if (_opPriority[o] < _opPriority[_operatorStack.Peek()])
-                    evalOp(lineNumber);
+            if (_operatorStack.Count > 0)
+            {
+                var nextOp = _operatorStack.Peek();
+                if (_opPriority.ContainsKey(o) && _opPriority.ContainsKey(nextOp))
+                    if (_opPriority[o] < _opPriority[_operatorStack.Peek()])
+                        evalOp(lineNumber);
+            }
             _operatorStack.Push(o);
             if (DEBUG) Console.WriteLine("oPush: "+o.ToString());
         }
@@ -235,13 +285,17 @@ namespace KXIParse
         {
             while (_operatorStack.Count > 0)
             {
+                var nextOp = _operatorStack.Peek();
+                if (_opPriority[nextOp] == 0) break;
+
                 switch (_operatorStack.Pop())
                 {
                     case Operator.Assignment:
                     {
+
                         var i1 = _recordStack.Pop();
                         var i2 = _recordStack.Pop();
-                        checkRecordsAreSameType(i1, i2, lineNumber);
+                        checkRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
                     }
                         break;
                     case Operator.Add:
@@ -251,39 +305,58 @@ namespace KXIParse
                     {
                         var i1 = _recordStack.Pop();
                         var i2 = _recordStack.Pop();
-                        checkRecordsAreSameType(i1,i2, lineNumber);
+                        checkRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
                         var result = new Record(
                             RecordType.Temporary,
-                            i1.Value + "." + i2.Value,
-                            new Symbol {Data = new Data {Type = i1.LinkedSymbol.Data.Type}});
+                            i1 + "." + i2,
+                            new Symbol {Data = new Data {Type = GetCompareString(i1)}});
                         _recordStack.Push(result);
                     }
+                        break;
+                    case Operator.Less:
+                    case Operator.More:
+                    case Operator.LessOrEqual:
+                    case Operator.MoreOrEqual:
+                        {
+                            var i1 = _recordStack.Pop();
+                            var i2 = _recordStack.Pop();
+                            checkRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
+                            var result = new Record(
+                                RecordType.Temporary,
+                                i1 + "." + i2,
+                                new Symbol { Data = new Data { Type = "bool" } });
+                            _recordStack.Push(result);
+                        }
                         break;
                 }
             }
         }
 
-        private static void checkRecordsAreSameType(Record r1,Record r2,int lineNumber)
+        private static void checkRecordsAreSameType(string v1,string v2,int lineNumber)
         {
-            var v1 = "";
-            var v2 = "";
-            if (r1.LinkedSymbol != null) v1 = r1.LinkedSymbol.Data.Type;
-            else if (r1.Type == RecordType.Literal) v1 = valueMap[r1.Value];
-            if (r2.LinkedSymbol != null) v2 = r2.LinkedSymbol.Data.Type;
-            else if (r2.Type == RecordType.Literal) v2 = valueMap[r1.Value];
-            
             if(!v1.Equals(v2))
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to perform operation between types '{1}' and '{2}'",
                                 lineNumber,
-                                r1,
-                                r2));
+                                v1,
+                                v2));
+        }
+
+        private static string GetCompareString(Record r)
+        {
+            if (r.Type == RecordType.New || r.Type == RecordType.Variable || r.Type == RecordType.Identifier || r.Type == RecordType.Temporary)
+            {
+                return r.LinkedSymbol.Data.IsArray ? r.LinkedSymbol.Data.Type + "[]" : r.LinkedSymbol.Data.Type;
+            }
+            if (r.Type == RecordType.Literal) return valueMap[r.Value];
+            if (r.Type == RecordType.NewArray) return r.Value + "[]";
+            return "";
         }
 
         private static Dictionary<string,string> valueMap = new Dictionary<string,string>
         {
             {"Number","int"},
             {"Character","char"},
-            {"Bumber","bool"}
+            {"Bool","bool"}
         };
     }
 

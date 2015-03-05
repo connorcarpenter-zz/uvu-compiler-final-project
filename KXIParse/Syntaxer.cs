@@ -142,7 +142,7 @@ namespace KXIParse
                 _syntaxSymbolTable.Add(symId,
                     new Symbol()
                     {
-                        Data = null,
+                        Data = new Data {Type = className},
                         Kind = "Class",
                         Scope = GetScopeString(),
                         SymId = symId,
@@ -416,7 +416,14 @@ namespace KXIParse
         {
             if (Accept(TokenType.ArrayBegin))
             {
+                if(Semanting)
+                    _semanter.oPush(Semanter.Operator.ArrayBegin,lastToken.LineNumber);
                 Expression();
+                if (Semanting)
+                {
+                    _semanter.arrayEnd(lastToken.LineNumber);
+                    _semanter.newArray(lastToken.LineNumber);
+                }
                 Expect(TokenType.ArrayEnd);
             }
             else
@@ -436,7 +443,7 @@ namespace KXIParse
 
                 if (Semanting)
                 {
-                    _semanter.parenBeginPop();
+                    _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
                     _semanter.newObj(GetScopeString(),lastToken.LineNumber);
                 }
@@ -454,7 +461,7 @@ namespace KXIParse
             while (Accept(TokenType.Comma))
             {
                 if (Semanting)
-                    _semanter.commaPop();
+                    _semanter.commaPop(token.LineNumber);
                 if (!Expression())
                     throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
             }
@@ -481,7 +488,8 @@ namespace KXIParse
                         _semanter.iPush(lastToken.Value);
                     if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                         FnArrMember();
-                    if (Semanting) _semanter.iExist(GetScopeString(),lastToken.LineNumber);
+                    if (Semanting)
+                        _semanter.iExist(GetScopeString(),lastToken.LineNumber);
                     if (Peek(TokenType.Period))
                         MemberRefz();
                 }
@@ -491,7 +499,6 @@ namespace KXIParse
                          Accept(TokenType.Number))
                 {
                     if (Semanting) _semanter.lPush(lastToken.Type);
-                    return false;
                 }
                 var backupList = new List<Token>(_tokensClone);
                 if (!ExpressionZ())
@@ -509,8 +516,14 @@ namespace KXIParse
         {
             if (Accept(TokenType.ArrayBegin))
             {
+                if (Semanting) _semanter.oPush(Semanter.Operator.ArrayBegin, lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ArrayEnd);
+                if (Semanting)
+                {
+                    _semanter.arrayEnd(lastToken.LineNumber);
+                    _semanter.newArray(lastToken.LineNumber);
+                }
             }
             else
             {
@@ -529,7 +542,7 @@ namespace KXIParse
 
                 if (Semanting)
                 {
-                    _semanter.parenBeginPop();
+                    _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
                 }
 
@@ -542,7 +555,8 @@ namespace KXIParse
         {
             Expect(TokenType.Period);
             Expect(TokenType.Identifier);
-            if (Semanting) _semanter.iPush(lastToken.Value);
+            if (Semanting)
+                _semanter.iPush(lastToken.Value);
             
             if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                 FnArrMember();
@@ -727,6 +741,12 @@ namespace KXIParse
                 Expression();
                 Expect(TokenType.Set);
                 Expect(TokenType.Identifier);
+                if (Semanting)
+                {
+                    _semanter.iPush(lastToken.Value);
+                    _semanter.iExist(GetScopeString(),lastToken.LineNumber);
+                    _semanter.spawn(GetScopeString(), lastToken.LineNumber);
+                }
                 Expect(TokenType.Semicolon);
                 return;
             }

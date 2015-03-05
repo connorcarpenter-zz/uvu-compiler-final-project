@@ -39,8 +39,6 @@ namespace KXIParse
                 lastToken = currentToken;
             }
 
-
-
             return PostProcess(tokenList);
         }
 
@@ -66,7 +64,7 @@ namespace KXIParse
                     continue;
                 }
 
-                if (l.Type == TokenType.Number && t.Type == TokenType.Number &&
+                if ((l.Type == TokenType.Number || l.Type == TokenType.Identifier) && t.Type == TokenType.Number &&
                     (t.Value[0].Equals('+') || t.Value[0].Equals('-'))) 
                 {
                     if (t.Value[0].Equals('+'))

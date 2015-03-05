@@ -1,13 +1,17 @@
 class Cat
 {
-	Cat(int i,int j)
+	unprotected int go(int i)
+	{
+	}
+
+	Cat()
 	{
 	}
 }
 
 void kxi2015 main()
 {
-int b = 1;
-int c = 2;
-Cat a = new Cat(b,c);
+	int g = 5;
+	Cat a = new Cat();
+	spawn a.go(g) set g;
 }
