@@ -25,6 +25,7 @@ namespace KXIParse
                 { Operator.Multiply, 3 }, { Operator.Divide, 3 },
                 { Operator.Add, 2 }, { Operator.Subtract, 2 },
                 { Operator.Less, 1 }, { Operator.More, 1 },{ Operator.LessOrEqual, 1 }, { Operator.MoreOrEqual, 1 },
+                { Operator.Equals, 1 }, { Operator.NotEquals, 1 },{ Operator.And, 1 }, { Operator.Or, 1 },
                 { Operator.ParenBegin, 0 }, { Operator.ArrayBegin, 0 } , { Operator.Assignment, -1 } , {Operator.Comma,0}
             };
         private static Stack<Record> _recordStack;
@@ -150,12 +151,58 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("Func: "+functionName.Value);
         }
 
-        public void spawn(string scope, int lineNumber)
+        public void checkSpawn(string scope, int lineNumber)
         {
-            var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist
+            var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist so...
             var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
-            if (DEBUG) Console.WriteLine("spawn: " + refSar.Value);
+            if (DEBUG) Console.WriteLine("checkSpawn: " + refSar.Value);
         }
+
+        public void checkIf(int lineNumber)
+        {
+            var expression_sar = _recordStack.Pop();
+            if(!GetCompareString(expression_sar).Equals("bool"))
+                throw new Exception(string.Format("Semantic error at line {0}: 'If' expression does not evaluate to a boolean", lineNumber));
+            if (DEBUG) Console.WriteLine("checkIf");
+        }
+
+        public void checkWhile(int lineNumber)
+        {
+            var expression_sar = _recordStack.Pop();
+            if (!GetCompareString(expression_sar).Equals("bool"))
+                throw new Exception(string.Format("Semantic error at line {0}: 'While' expression does not evaluate to a boolean", lineNumber));
+            if (DEBUG) Console.WriteLine("checkWhile");
+        }
+
+        //These are the ones left to code:
+        public void CD(string scope, int lineNumber)
+        {
+        }
+        public void checkAtoi(int lineNumber)
+        {
+        }
+        public void checkBlock(int lineNumber)
+        {
+        }
+        public void checkCin(int lineNumber)
+        {
+        }
+        public void checkCout(int lineNumber)
+        {
+        }
+        public void checkItoa(int lineNumber)
+        {
+        }
+        public void checkLock(int lineNumber)
+        {
+        }
+        public void checkRelease(int lineNumber)
+        {
+        }
+        public void checkReturn(int lineNumber)
+        {
+        }
+        /////////////////////////////////////////
 
         public void iPush(string iname) //identifier push
         {
@@ -317,6 +364,10 @@ namespace KXIParse
                     case Operator.More:
                     case Operator.LessOrEqual:
                     case Operator.MoreOrEqual:
+                    case Operator.Equals:
+                    case Operator.NotEquals:
+                    case Operator.And:
+                    case Operator.Or:
                         {
                             var i1 = _recordStack.Pop();
                             var i2 = _recordStack.Pop();

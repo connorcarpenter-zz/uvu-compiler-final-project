@@ -144,7 +144,7 @@ namespace KXIParse
             {TokenType.True, new TokenTypeData("True","^true")},
             {TokenType.Void, new TokenTypeData("Void","^void",TokenType.Type)},
             {TokenType.While, new TokenTypeData("While","^while")},
-            {TokenType.Spawn, new TokenTypeData("Spawn","^spawn")},
+            {TokenType.Spawn, new TokenTypeData("Spawn","^checkSpawn")},
             {TokenType.Lock, new TokenTypeData("Lock","^lock")},
             {TokenType.Release, new TokenTypeData("Release","^release")},
             {TokenType.Block, new TokenTypeData("Block","^block")},

@@ -198,6 +198,12 @@ namespace KXIParse
                 var type = GetToken().Value;
                 Expect(TokenType.Type);
 
+                if (Semanting)
+                {
+                    _semanter.tPush(lastToken.Value);
+                    _semanter.tExist(lastToken.LineNumber);
+                }
+
                 var name = GetToken().Value;
                 Expect(TokenType.Identifier);
 
@@ -219,13 +225,19 @@ namespace KXIParse
                     isArray = true;
                     Expect(TokenType.ArrayBegin);
                     Expect(TokenType.ArrayEnd);
+                    if(Semanting)
+                        _semanter.vPush(GetScopeString(),name,true);
                 }
                 if (Peek(TokenType.Assignment))
                 {
                     Expect(TokenType.Assignment);
+                    if(Semanting)
+                        _semanter.oPush(Semanter.Operator.Assignment,lastToken.LineNumber);
                     AssignmentExpression();
                 }
                 Expect(TokenType.Semicolon);
+                if(Semanting)
+                    _semanter.EOE(lastToken.LineNumber);
 
                 //add to symbol table
                 if (Syntaxing)
@@ -299,6 +311,9 @@ namespace KXIParse
         {
             var name = ClassName();
 
+            if (Semanting)
+                _semanter.CD(name,lastToken.LineNumber);
+
             var paramList = new List<string>();
 
             Expect(TokenType.ParenBegin);
@@ -351,16 +366,30 @@ namespace KXIParse
             if (Accept(TokenType.Atoi))
             {
                 Expect(TokenType.ParenBegin);
+                if(Semanting)
+                    _semanter.oPush(Semanter.Operator.ParenBegin,lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ParenEnd);
+                if (Semanting)
+                {
+                    _semanter.parenEnd(lastToken.LineNumber);
+                    _semanter.checkAtoi(lastToken.LineNumber);
+                }
                 return true;
             }
 
             if (Accept(TokenType.Itoa))
             {
                 Expect(TokenType.ParenBegin);
+                if (Semanting)
+                    _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ParenEnd);
+                if (Semanting)
+                {
+                    _semanter.parenEnd(lastToken.LineNumber);
+                    _semanter.checkItoa(lastToken.LineNumber);
+                }
                 return true;
             }
 
@@ -378,6 +407,12 @@ namespace KXIParse
         {
             var type = GetToken().Value;
             Expect(TokenType.Type);
+
+            if (Semanting)
+            {
+                _semanter.tPush(lastToken.Value);
+                _semanter.tExist(lastToken.LineNumber);
+            }
 
             var name = GetToken().Value;
             Expect(TokenType.Identifier);
@@ -474,9 +509,13 @@ namespace KXIParse
             {
                 if (Accept(TokenType.ParenBegin))
                 {
+                    if (Semanting)
+                        _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
                     if (!Expression())
                         return false;
                     Expect(TokenType.ParenEnd);
+                    if (Semanting)
+                        _semanter.parenEnd(lastToken.LineNumber);
                 }
                 else if (Accept(TokenType.Character))
                 {
@@ -516,7 +555,8 @@ namespace KXIParse
         {
             if (Accept(TokenType.ArrayBegin))
             {
-                if (Semanting) _semanter.oPush(Semanter.Operator.ArrayBegin, lastToken.LineNumber);
+                if (Semanting)
+                    _semanter.oPush(Semanter.Operator.ArrayBegin, lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ArrayEnd);
                 if (Semanting)
@@ -544,10 +584,8 @@ namespace KXIParse
                 {
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
-                }
-
-                if(Semanting)
                     _semanter.func();
+                }
             }
         }
 
@@ -701,8 +739,15 @@ namespace KXIParse
             if (Accept(TokenType.If))
             {
                 Expect(TokenType.ParenBegin);
+                if(Semanting)
+                    _semanter.oPush(Semanter.Operator.ParenBegin,lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ParenEnd);
+                if (Semanting)
+                {
+                    _semanter.parenEnd(lastToken.LineNumber);
+                    _semanter.checkIf(lastToken.LineNumber);
+                }
                 Statement();
                 if (Accept(TokenType.Else))
                     Statement();
@@ -711,8 +756,15 @@ namespace KXIParse
             if (Accept(TokenType.While))
             {
                 Expect(TokenType.ParenBegin);
+                if (Semanting)
+                    _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
                 Expression();
                 Expect(TokenType.ParenEnd);
+                if (Semanting)
+                {
+                    _semanter.parenEnd(lastToken.LineNumber);
+                    _semanter.checkWhile(lastToken.LineNumber);
+                }
                 Statement();
                 return;
             }
@@ -720,6 +772,8 @@ namespace KXIParse
             {
                 Expression();
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkReturn(lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Cout))
@@ -727,6 +781,8 @@ namespace KXIParse
                 Expect(TokenType.Extraction);
                 Expression();
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkCout(lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Cin))
@@ -734,6 +790,8 @@ namespace KXIParse
                 Expect(TokenType.Insertion);
                 Expression();
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkCin(lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Spawn))
@@ -745,7 +803,7 @@ namespace KXIParse
                 {
                     _semanter.iPush(lastToken.Value);
                     _semanter.iExist(GetScopeString(),lastToken.LineNumber);
-                    _semanter.spawn(GetScopeString(), lastToken.LineNumber);
+                    _semanter.checkSpawn(GetScopeString(), lastToken.LineNumber);
                 }
                 Expect(TokenType.Semicolon);
                 return;
@@ -753,18 +811,28 @@ namespace KXIParse
             if (Accept(TokenType.Block))
             {
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkBlock(lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Lock))
             {
                 Expect(TokenType.Identifier);
+                if (Semanting)
+                    _semanter.iPush(lastToken.Value);
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkLock(lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Release))
             {
                 Expect(TokenType.Identifier);
+                if (Semanting)
+                    _semanter.iPush(lastToken.Value);
                 Expect(TokenType.Semicolon);
+                if (Semanting)
+                    _semanter.checkRelease(lastToken.LineNumber);
                 return;
             }
             if (Expression())
