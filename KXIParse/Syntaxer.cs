@@ -6,7 +6,8 @@ namespace KXIParse
 {
     class Syntaxer
     {
-        private const bool DEBUG = false;
+        private const bool DEBUGTOKENS = true;
+        private const bool DEBUGMETA = true;
         private static Token lastToken;
         private readonly List<Token> _tokens;
         private static List<Token> _tokensClone;
@@ -76,7 +77,7 @@ namespace KXIParse
 
         private static void NextToken()
         {
-            if(DEBUG)
+            if(DEBUGTOKENS)
                 Console.WriteLine("Line {0}: {1} - {2}", 
                     GetToken().LineNumber,
                     TokenData.Get()[GetToken().Type].Name,
@@ -116,6 +117,7 @@ namespace KXIParse
 
         private void StartSymbol()
         {
+            if(DEBUGMETA)Console.WriteLine("--Start Symbol");
             while (Peek(TokenType.Class))
             {
                 ClassDeclaration();
@@ -132,6 +134,7 @@ namespace KXIParse
 
         private void ClassDeclaration()
         {
+            if (DEBUGMETA) Console.WriteLine("--Class Declaration");
             Expect(TokenType.Class);
 
             var className = ClassName();
@@ -169,6 +172,8 @@ namespace KXIParse
 
         private string ClassName()
         {
+            if (DEBUGMETA) Console.WriteLine("--Class Name");
+
             var className = GetToken().Value;
             Expect(TokenType.Identifier);
             return className;
@@ -190,6 +195,8 @@ namespace KXIParse
 
         private void ClassMemberDeclaration()
         {
+            if (DEBUGMETA) Console.WriteLine("--Class Member Declaration");
+
             if (Peek(TokenType.Modifier))
             {
                 var modifier = GetToken().Value;
@@ -217,6 +224,10 @@ namespace KXIParse
 
         private void FieldDeclaration(string modifier, string type, string name)
         {
+            if(Semanting)//remove this
+                if (DEBUGMETA)
+                    Console.WriteLine("Field Declaration");
+
             if (Peek(TokenType.ArrayBegin) || Peek(TokenType.Assignment) || Peek(TokenType.Semicolon))
             {
                 var isArray = false;
@@ -225,9 +236,9 @@ namespace KXIParse
                     isArray = true;
                     Expect(TokenType.ArrayBegin);
                     Expect(TokenType.ArrayEnd);
-                    if(Semanting)
-                        _semanter.vPush(GetScopeString(),name,true);
                 }
+                if (Semanting)
+                    _semanter.vPush(GetScopeString(), name, isArray);
                 if (Peek(TokenType.Assignment))
                 {
                     Expect(TokenType.Assignment);
@@ -309,6 +320,8 @@ namespace KXIParse
 
         private void ConstructorDeclaration()
         {
+            if (DEBUGMETA) Console.WriteLine("--Constructor Declaration");
+
             var name = ClassName();
 
             if (Semanting)
@@ -350,8 +363,17 @@ namespace KXIParse
 
         private bool AssignmentExpression()
         {
+            if (DEBUGMETA) Console.WriteLine("--Assignment Expression");
+
             if (Accept(TokenType.This))
+            {
+                if (Semanting)
+                {
+                    _semanter.iPush(lastToken.Value);
+                    _semanter.iExist(GetScopeString(),lastToken.LineNumber);
+                }
                 return true;
+            }
 
             if (Accept(TokenType.New))
             {
@@ -398,6 +420,8 @@ namespace KXIParse
 
         private void ParameterList(List<string> paramList = null)
         {
+            if (DEBUGMETA) Console.WriteLine("--Parameter List");
+
             Parameter(paramList);
             while (Accept(TokenType.Comma))
                 Parameter(paramList);
@@ -449,6 +473,8 @@ namespace KXIParse
 
         private void NewDeclaration()
         {
+            if (DEBUGMETA) Console.WriteLine("--New Declaration");
+
             if (Accept(TokenType.ArrayBegin))
             {
                 if(Semanting)
@@ -480,13 +506,15 @@ namespace KXIParse
                 {
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
-                    _semanter.newObj(GetScopeString(),lastToken.LineNumber);
+                    _semanter.newObj(lastToken.LineNumber);
                 }
             }
         }
 
         private void ArgumentList()
         {
+            if (DEBUGMETA) Console.WriteLine("--Argument List");
+
             var token = GetToken();
 
             if (!Expression())
@@ -504,6 +532,8 @@ namespace KXIParse
 
         private bool Expression()
         {
+            if (DEBUGMETA) Console.WriteLine("--Expression");
+
             //put expects in a try catch, need to return true true/false here
             try
             {
@@ -553,6 +583,8 @@ namespace KXIParse
 
         private void FnArrMember()
         {
+            if (DEBUGMETA) Console.WriteLine("--Fn Arr Member");
+
             if (Accept(TokenType.ArrayBegin))
             {
                 if (Semanting)
@@ -591,6 +623,8 @@ namespace KXIParse
 
         private void MemberRefz()
         {
+            if (DEBUGMETA) Console.WriteLine("--Member Refz");
+
             Expect(TokenType.Period);
             Expect(TokenType.Identifier);
             if (Semanting)
@@ -606,10 +640,15 @@ namespace KXIParse
 
         private bool ExpressionZ()
         {
+            if (DEBUGMETA) Console.WriteLine("--Expression Z");
+
             if (Accept(TokenType.Assignment))
             {
                 if (Semanting)
+                {
+                    _semanter.checkArrayIndexAssignment();
                     _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
+                }
                 return AssignmentExpression();
             }
             if (Accept(TokenType.And) || Accept(TokenType.Or) || Accept(TokenType.Equals) ||
@@ -642,6 +681,9 @@ namespace KXIParse
                         case TokenType.Less:
                             _semanter.oPush(Semanter.Operator.Less, lastToken.LineNumber);
                             break;
+                        case TokenType.More:
+                            _semanter.oPush(Semanter.Operator.More, lastToken.LineNumber);
+                            break;
                         case TokenType.Add:
                             _semanter.oPush(Semanter.Operator.Add, lastToken.LineNumber);
                             break;
@@ -663,6 +705,8 @@ namespace KXIParse
 
         private void MethodBody()
         {
+            if (DEBUGMETA) Console.WriteLine("--Method Body");
+
             Expect(TokenType.BlockBegin);
             while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
                 VariableDeclaration();
@@ -673,6 +717,8 @@ namespace KXIParse
 
         private void VariableDeclaration()
         {
+            if (DEBUGMETA) Console.WriteLine("--Variable Declaration");
+
             var type = GetToken().Value;
             Expect(TokenType.Type);
 
@@ -729,6 +775,8 @@ namespace KXIParse
 
         private void Statement()
         {
+            if (DEBUGMETA) Console.WriteLine("--Statement");
+
             if (Accept(TokenType.BlockBegin))
             {
                 while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))
@@ -873,8 +921,8 @@ namespace KXIParse
         private static void DebugTracking()
         {
             if (GetToken() == null) return;
-            if(DEBUG)
-            if (GetToken().LineNumber == 8)//when you're stepping through code, this'll take you straight to where you want to go
+            if(DEBUGTOKENS)
+            if (GetToken().LineNumber == -1)//when you're stepping through code, this'll take you straight to where you want to go
                 Console.WriteLine("Arrived");
         }
     }

@@ -38,7 +38,7 @@ namespace KXIParse
             NewArray
         }
 
-        public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym" };
+        public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym","void" };
 
         internal class Record
         {
@@ -66,13 +66,13 @@ namespace KXIParse
         public void EOE(int lineNumber) //end of expression
         {
             evalOp(lineNumber);
-            if(DEBUG)Console.WriteLine("EOE");
+            if(DEBUG)Console.WriteLine("   EOE");
         }
 
         public void BAL() //beginning of array push
         {
             _recordStack.Push(new Record(RecordType.BAL,null,null));
-            if (DEBUG) Console.WriteLine("BAL");
+            if (DEBUG) Console.WriteLine("   BAL");
         }
 
         public void EAL() //ending of array pop
@@ -87,13 +87,13 @@ namespace KXIParse
                 endOfArgumentListRecord.ArgumentList.Push(record);
             }
             _recordStack.Push(endOfArgumentListRecord);
-            if (DEBUG) Console.WriteLine("EAL");
+            if (DEBUG) Console.WriteLine("   EAL");
         }
 
         public void commaPop(int lineNumber) //comma pop
         {
             evalOp(lineNumber);
-            if (DEBUG) Console.WriteLine("#,");
+            if (DEBUG) Console.WriteLine("   #,");
         }
 
         public void newArray(int lineNumber) //new array, check that operator is an int
@@ -106,7 +106,15 @@ namespace KXIParse
             //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
             typeSar.Type = RecordType.NewArray;
             _recordStack.Push(typeSar);
-            if (DEBUG) Console.WriteLine("newArray");
+            if (DEBUG) Console.WriteLine("   newArray");
+        }
+
+        public void checkArrayIndexAssignment()
+        {
+            var id = _recordStack.Pop();
+            if (id.LinkedSymbol.Data.IsArray)
+                id.LinkedSymbol.Data.IsArray = false;
+            _recordStack.Push(id);
         }
 
         public void parenEnd(int lineNumber) //go through the operator stack until you pop parenBegin
@@ -121,7 +129,7 @@ namespace KXIParse
                 }
                 evalOp(lineNumber);
             }
-            if (DEBUG) Console.WriteLine("#)");
+            if (DEBUG) Console.WriteLine("   #)");
         }
 
         public void arrayEnd(int lineNumber)
@@ -138,7 +146,7 @@ namespace KXIParse
             }
 
 
-            if (DEBUG) Console.WriteLine("#]");
+            if (DEBUG) Console.WriteLine("   #]");
         }
 
         public void func() //function
@@ -148,14 +156,14 @@ namespace KXIParse
             functionName.Type = RecordType.Func;
             functionName.ArgumentList = argumentList.ArgumentList;
             _recordStack.Push(functionName);
-            if (DEBUG) Console.WriteLine("Func: "+functionName.Value);
+            if (DEBUG) Console.WriteLine("   Func: " + functionName.Value);
         }
 
         public void checkSpawn(string scope, int lineNumber)
         {
             var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist so...
             var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
-            if (DEBUG) Console.WriteLine("checkSpawn: " + refSar.Value);
+            if (DEBUG) Console.WriteLine("   checkSpawn: " + refSar.Value);
         }
 
         public void checkIf(int lineNumber)
@@ -163,7 +171,7 @@ namespace KXIParse
             var expression_sar = _recordStack.Pop();
             if(!GetCompareString(expression_sar).Equals("bool"))
                 throw new Exception(string.Format("Semantic error at line {0}: 'If' expression does not evaluate to a boolean", lineNumber));
-            if (DEBUG) Console.WriteLine("checkIf");
+            if (DEBUG) Console.WriteLine("   checkIf");
         }
 
         public void checkWhile(int lineNumber)
@@ -171,7 +179,7 @@ namespace KXIParse
             var expression_sar = _recordStack.Pop();
             if (!GetCompareString(expression_sar).Equals("bool"))
                 throw new Exception(string.Format("Semantic error at line {0}: 'While' expression does not evaluate to a boolean", lineNumber));
-            if (DEBUG) Console.WriteLine("checkWhile");
+            if (DEBUG) Console.WriteLine("   checkWhile");
         }
 
         public void CD(string name,string scope, int lineNumber)
@@ -179,7 +187,7 @@ namespace KXIParse
             var scopes = scope.Split('.');
             if(name!=scopes[scopes.Length-1])
                 throw new Exception(string.Format("Semantic error at line {0}: Constructor name '{1}' does not match class name of scope '{2}'",lineNumber,name,scopes[scopes.Length-1]));
-            if(DEBUG)Console.WriteLine("CD: {0} in {1}", name, scope);
+            if (DEBUG) Console.WriteLine("   CD: {0} in {1}", name, scope);
         }
         
         public void checkAtoi(int lineNumber)
@@ -189,7 +197,7 @@ namespace KXIParse
                 throw new Exception(string.Format("Semantic error at line {0}: 'Atoi' expression does not evaluate to char", lineNumber));
             expression_sar.LinkedSymbol.Data.Type = "int";
             _recordStack.Push(expression_sar);
-            if (DEBUG) Console.WriteLine("checkAtoi");
+            if (DEBUG) Console.WriteLine("   checkAtoi");
         }
 
         public void checkItoa(int lineNumber)
@@ -199,13 +207,13 @@ namespace KXIParse
                 throw new Exception(string.Format("Semantic error at line {0}: 'Itoa' expression does not evaluate to int", lineNumber));
             expression_sar.LinkedSymbol.Data.Type = "char";
             _recordStack.Push(expression_sar);
-            if (DEBUG) Console.WriteLine("checkItoa");
+            if (DEBUG) Console.WriteLine("   checkItoa");
         }
 
         public void checkBlock(int lineNumber)
         {
             //check that the block is on the main thread
-            if(DEBUG)Console.WriteLine("block");
+            if (DEBUG) Console.WriteLine("   block");
         }
 
         //These are the ones left to code:
@@ -217,7 +225,7 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("int") && !compare_str.Equals("char"))
                 throw new Exception(string.Format("Semantic error at line {0}: Variable cannot get input from Cin", lineNumber));
-            if (DEBUG) Console.WriteLine("checkCin");
+            if (DEBUG) Console.WriteLine("   checkCin");
         }
 
         public void checkCout(int lineNumber)
@@ -228,7 +236,7 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("int") && !compare_str.Equals("char"))
                 throw new Exception(string.Format("Semantic error at line {0}: Variable cannot be outputted to Cout", lineNumber));
-            if (DEBUG) Console.WriteLine("checkCout");
+            if (DEBUG) Console.WriteLine("   checkCout");
         }
         
         public void checkLock(int lineNumber)
@@ -237,7 +245,7 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("sym"))
                 throw new Exception(string.Format("Semantic error at line {0}: Lock variable needs to be of type sym, but is of type '{1}'", lineNumber,compare_str));
-            if (DEBUG) Console.WriteLine("checkLock");
+            if (DEBUG) Console.WriteLine("   checkLock");
         }
 
         public void checkRelease(int lineNumber)
@@ -246,7 +254,7 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("sym"))
                 throw new Exception(string.Format("Semantic error at line {0}: Release variable needs to be of type sym, but is of type '{1}'", lineNumber, compare_str));
-            if (DEBUG) Console.WriteLine("checkRelease");
+            if (DEBUG) Console.WriteLine("   checkRelease");
         }
 
         public void checkReturn(string scope,int lineNumber)
@@ -266,29 +274,40 @@ namespace KXIParse
             if(!expCompare.Equals(methodCompare))
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to return a value of type '{1}' from method '{2}' which is set to return value of type '{3}'",
                     lineNumber,expCompare,methodName,method.Data.Type));
-            if (DEBUG) Console.WriteLine("checkReturn");
+            if (DEBUG) Console.WriteLine("   checkReturn");
         }
 
         public void iPush(string iname) //identifier push
         {
             _recordStack.Push(new Record(RecordType.Identifier, iname, null));
-            if (DEBUG) Console.WriteLine("iPush: " + iname);
+            if (DEBUG) Console.WriteLine("   iPush: " + iname);
         }
 
         public void iExist(string scope,int lineNumber) //identifier exists
         {
             var identifier = _recordStack.Pop();
-            var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value select s.Value).FirstOrDefault();
+
+            //figure out if this is in a method
+            
+            var methodName = scope.Split('.').Last();
+            var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
+            var inMethod = _symbolTable.Any(
+                s => s.Value.Kind == "method" && s.Value.Value == methodName && s.Value.Scope == methodScope);
+
+            var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind=="lvar" || s.Value.Kind=="param") select s.Value).FirstOrDefault();
+            if (symbol == null && inMethod)
+                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && s.Value.Kind == "ivar" select s.Value).FirstOrDefault();
             if (symbol!=null)
             {
                 identifier.LinkedSymbol = symbol;
+                identifier.Type = RecordType.Identifier;
                 _recordStack.Push(identifier);
             }
             else
             {
                 throw new Exception(string.Format("Semantic error at line {0}: Identifier {1} does not exist", lineNumber,identifier.Value));
             }
-            if (DEBUG) Console.WriteLine("iExist: "+identifier.Value);
+            if (DEBUG) Console.WriteLine("   iExist: " + identifier.Value);
         }
 
         public void rExist(int lineNumber) //member reference identifier exists
@@ -308,7 +327,7 @@ namespace KXIParse
             {
                 throw new Exception(string.Format("Semantic error at line {0}: Identifier {2}.{1} does not exist", lineNumber, childId.Value, parentId.Value));
             }
-            if (DEBUG) Console.WriteLine("rExist");
+            if (DEBUG) Console.WriteLine("   rExist");
         }
 
         public void oPush(Operator o,int lineNumber) //operator push
@@ -321,17 +340,22 @@ namespace KXIParse
                         evalOp(lineNumber);
             }
             _operatorStack.Push(o);
-            if (DEBUG) Console.WriteLine("oPush: "+o.ToString());
+            if (DEBUG) Console.WriteLine("   oPush: " + o.ToString());
         }
 
-        public void newObj(string scope,int lineNumber)
+        public void newObj(int lineNumber)
         {
             var alSar = _recordStack.Pop();
             var typeSar = _recordStack.Pop();
 
-            var sym = _symbolTable.First(s => s.Value.Kind == "Constructor" && s.Value.Value == typeSar.Value).Value;
-            if(sym==null)
-                throw new Exception("need better text for this, but theres no constructor for the class your instantiating.");
+            Symbol sym;
+            if (_symbolTable.Any(s => s.Value.Kind == "Constructor" && s.Value.Value == typeSar.Value))
+                sym = _symbolTable.First(s => s.Value.Kind == "Constructor" && s.Value.Value == typeSar.Value).Value;
+            else
+                throw new Exception(string.Format("Semantic error at line {0}: No constructor exists for class '{1}')",
+                    lineNumber, typeSar.Value));
+
+            var constructorScope = "g." + typeSar.Value + "." + typeSar.Value;
             typeSar.ArgumentList=new Stack<Record>();
             foreach (var a in sym.Data.Params)
             {
@@ -339,7 +363,7 @@ namespace KXIParse
                 var argName = argRecord.Value;
                 var symbol =
                     (from p in _symbolTable
-                        where p.Value.Scope == scope && p.Value.Value == argName
+                        where p.Value.Scope == constructorScope && p.Key == a
                         select p.Value).FirstOrDefault();
                 if (symbol == null || symbol.Data.Type != _symbolTable[a].Data.Type)
                     throw new Exception(
@@ -352,7 +376,7 @@ namespace KXIParse
             typeSar.Type = RecordType.New;
             typeSar.LinkedSymbol = sym;
             _recordStack.Push(typeSar);
-            Console.WriteLine("newObj: " + typeSar.Value);
+            Console.WriteLine("   newObj: " + typeSar.Value);
         }
 
         public void vPush(string scope,string vName,bool isArray)
@@ -362,20 +386,20 @@ namespace KXIParse
             if(isArray != !(sym.Data==null || sym.Data.IsArray==false))
                 throw new Exception("Semantic Error: loaded symbol and scanned symbol do not match, array-wise....");
             _recordStack.Push(new Record(RecordType.Variable, vName, sym));
-            if (DEBUG) Console.WriteLine("vPush: " + vName);
+            if (DEBUG) Console.WriteLine("   vPush: " + vName);
         }
 
         public void lPush(TokenType type)
         {
             var name = TokenData.Get()[type].Name;
             _recordStack.Push(new Record(RecordType.Literal, TokenData.Get()[type].Name, null));
-            if (DEBUG) Console.WriteLine("lPush: " + name);
+            if (DEBUG) Console.WriteLine("   lPush: " + name);
         }
 
         public void tPush(string tname)
         {
             _recordStack.Push(new Record(RecordType.Type, tname,null));
-            if (DEBUG) Console.WriteLine("tPush: " + tname);
+            if (DEBUG) Console.WriteLine("   tPush: " + tname);
         }
 
         public void tExist(int lineNumber)
@@ -387,7 +411,7 @@ namespace KXIParse
                 done = true;
             if (done)
             {
-                if (DEBUG) Console.WriteLine("tExist: " + type.Value);
+                if (DEBUG) Console.WriteLine("   tExist: " + type.Value);
             }
             else
                 throw new Exception(string.Format("Semantic error at line {0}: Type {1} does not exist", lineNumber, type.Value));
@@ -459,7 +483,7 @@ namespace KXIParse
 
         private static string GetCompareString(Record r)
         {
-            if (r.Type == RecordType.New || r.Type == RecordType.Variable || r.Type == RecordType.Identifier || r.Type == RecordType.Temporary)
+            if (r.Type == RecordType.New || r.Type == RecordType.Variable || r.Type == RecordType.Identifier || r.Type == RecordType.Temporary || r.Type == RecordType.Func)
             {
                 return r.LinkedSymbol.Data.IsArray ? r.LinkedSymbol.Data.Type + "[]" : r.LinkedSymbol.Data.Type;
             }

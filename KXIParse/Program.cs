@@ -11,12 +11,28 @@ namespace KXIParse
             {
                 var lexer = new Lexer("../../program.kxi");
                 var tokens = lexer.GenerateTokens();
-                //PrintTokenList(tokens);
+                if (false)
+                {
+                    PrintTokenList(tokens);
+                    Console.WriteLine("Lexical analysis is done");
+                    Console.ReadLine();
+                }
+
                 var syntaxer = new Syntaxer(tokens);
                 var symbolTable = syntaxer.SyntaxPass();
-                //PrintSymbolTable(symbolTable);
-                Console.WriteLine("Syntax is done");
+                if (false)
+                {
+                    Console.WriteLine("Syntax pass is done");
+                    Console.ReadLine();
+
+                    PrintSymbolTable(symbolTable);
+                    Console.WriteLine("Symbol table is done");
+                    Console.ReadLine();
+                }
+
                 syntaxer.SemanticPass(symbolTable);
+                Console.WriteLine("Semantics pass is done");
+                Console.ReadLine();
             }
             catch(Exception e)
             {
