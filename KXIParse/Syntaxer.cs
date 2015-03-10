@@ -312,7 +312,7 @@ namespace KXIParse
             var name = ClassName();
 
             if (Semanting)
-                _semanter.CD(name,lastToken.LineNumber);
+                _semanter.CD(name, GetScopeString(),lastToken.LineNumber);
 
             var paramList = new List<string>();
 
@@ -773,7 +773,7 @@ namespace KXIParse
                 Expression();
                 Expect(TokenType.Semicolon);
                 if (Semanting)
-                    _semanter.checkReturn(lastToken.LineNumber);
+                    _semanter.checkReturn(GetScopeString(),lastToken.LineNumber);
                 return;
             }
             if (Accept(TokenType.Cout))

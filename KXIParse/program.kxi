@@ -2,6 +2,7 @@ class Cat
 {
 	unprotected int go(int i)
 	{
+		return 10;
 	}
 
 	Cat()
@@ -10,9 +11,16 @@ class Cat
 		int j = 2;
 		if(i==j)
 			i=i+1;
+		
 	}
 }
 
 void kxi2015 main()
 {
+	char c = 'c';
+	int f = atoi(c);
+	char a = itoa(f);
+	cin >> a;
+	cout << f;
+
 }

@@ -174,35 +174,100 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("checkWhile");
         }
 
-        //These are the ones left to code:
-        public void CD(string scope, int lineNumber)
+        public void CD(string name,string scope, int lineNumber)
         {
+            var scopes = scope.Split('.');
+            if(name!=scopes[scopes.Length-1])
+                throw new Exception(string.Format("Semantic error at line {0}: Constructor name '{1}' does not match class name of scope '{2}'",lineNumber,name,scopes[scopes.Length-1]));
+            if(DEBUG)Console.WriteLine("CD: {0} in {1}", name, scope);
         }
+        
         public void checkAtoi(int lineNumber)
         {
+            var expression_sar = _recordStack.Pop();
+            if (!GetCompareString(expression_sar).Equals("char"))
+                throw new Exception(string.Format("Semantic error at line {0}: 'Atoi' expression does not evaluate to char", lineNumber));
+            expression_sar.LinkedSymbol.Data.Type = "int";
+            _recordStack.Push(expression_sar);
+            if (DEBUG) Console.WriteLine("checkAtoi");
         }
-        public void checkBlock(int lineNumber)
-        {
-        }
-        public void checkCin(int lineNumber)
-        {
-        }
-        public void checkCout(int lineNumber)
-        {
-        }
+
         public void checkItoa(int lineNumber)
         {
+            var expression_sar = _recordStack.Pop();
+            if (!GetCompareString(expression_sar).Equals("int"))
+                throw new Exception(string.Format("Semantic error at line {0}: 'Itoa' expression does not evaluate to int", lineNumber));
+            expression_sar.LinkedSymbol.Data.Type = "char";
+            _recordStack.Push(expression_sar);
+            if (DEBUG) Console.WriteLine("checkItoa");
         }
+
+        public void checkBlock(int lineNumber)
+        {
+            //check that the block is on the main thread
+            if(DEBUG)Console.WriteLine("block");
+        }
+
+        //These are the ones left to code:
+        public void checkCin(int lineNumber)
+        {
+            evalOp(lineNumber);
+
+            var expression_sar = _recordStack.Pop();
+            var compare_str = GetCompareString(expression_sar);
+            if (!compare_str.Equals("int") && !compare_str.Equals("char"))
+                throw new Exception(string.Format("Semantic error at line {0}: Variable cannot get input from Cin", lineNumber));
+            if (DEBUG) Console.WriteLine("checkCin");
+        }
+
+        public void checkCout(int lineNumber)
+        {
+            evalOp(lineNumber);
+
+            var expression_sar = _recordStack.Pop();
+            var compare_str = GetCompareString(expression_sar);
+            if (!compare_str.Equals("int") && !compare_str.Equals("char"))
+                throw new Exception(string.Format("Semantic error at line {0}: Variable cannot be outputted to Cout", lineNumber));
+            if (DEBUG) Console.WriteLine("checkCout");
+        }
+        
         public void checkLock(int lineNumber)
         {
+            var expression_sar = _recordStack.Pop();
+            var compare_str = GetCompareString(expression_sar);
+            if (!compare_str.Equals("sym"))
+                throw new Exception(string.Format("Semantic error at line {0}: Lock variable needs to be of type sym, but is of type '{1}'", lineNumber,compare_str));
+            if (DEBUG) Console.WriteLine("checkLock");
         }
+
         public void checkRelease(int lineNumber)
         {
+            var expression_sar = _recordStack.Pop();
+            var compare_str = GetCompareString(expression_sar);
+            if (!compare_str.Equals("sym"))
+                throw new Exception(string.Format("Semantic error at line {0}: Release variable needs to be of type sym, but is of type '{1}'", lineNumber, compare_str));
+            if (DEBUG) Console.WriteLine("checkRelease");
         }
-        public void checkReturn(int lineNumber)
+
+        public void checkReturn(string scope,int lineNumber)
         {
+            evalOp(lineNumber);
+
+            var expression_sar = _recordStack.Pop();
+            var expCompare = GetCompareString(expression_sar);
+
+            var scopes = scope.Split('.');
+            var methodName = scopes[scopes.Length - 1];
+            var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
+            var method = _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value==methodName).Select(s => s.Value).FirstOrDefault();
+            if(method == null)
+                throw new Exception(string.Format("Semantic error at line {0}: Cannot find method defined for this scope",lineNumber));
+            var methodCompare = GetCompareString(new Record(RecordType.Identifier, "", method));
+            if(!expCompare.Equals(methodCompare))
+                throw new Exception(string.Format("Semantic error at line {0}: Trying to return a value of type '{1}' from method '{2}' which is set to return value of type '{3}'",
+                    lineNumber,expCompare,methodName,method.Data.Type));
+            if (DEBUG) Console.WriteLine("checkReturn");
         }
-        /////////////////////////////////////////
 
         public void iPush(string iname) //identifier push
         {
