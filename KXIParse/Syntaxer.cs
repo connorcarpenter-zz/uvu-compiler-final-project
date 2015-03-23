@@ -6,8 +6,8 @@ namespace KXIParse
 {
     class Syntaxer
     {
-        private const bool DEBUGTOKENS = true;
-        private const bool DEBUGMETA = true;
+        private const bool DEBUGTOKENS = false;
+        private const bool DEBUGMETA = false;
         private static Token lastToken;
         private readonly List<Token> _tokens;
         private static List<Token> _tokensClone;
@@ -32,13 +32,15 @@ namespace KXIParse
             return _syntaxSymbolTable;
         }
 
-        public void SemanticPass(Dictionary<string, Symbol> symbolTable)
+        public List<string> SemanticPass(Dictionary<string, Symbol> symbolTable)
         {
             Syntaxing = false;
             Semanting = true;
-            _semanter = new Semanter(this,symbolTable);
+            var icodeList = new List<string>();
+            _semanter = new Semanter(this,symbolTable,icodeList);
             InitTokens();
             StartSymbol();
+            return icodeList;
         }
 
         private void InitTokens()

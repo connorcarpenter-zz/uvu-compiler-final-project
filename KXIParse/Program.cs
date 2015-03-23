@@ -30,7 +30,7 @@ namespace KXIParse
                     Console.ReadLine();
                 }
 
-                syntaxer.SemanticPass(symbolTable);
+                var icodeList = syntaxer.SemanticPass(symbolTable);
                 Console.WriteLine("Semantics pass is done");
                 Console.ReadLine();
             }
