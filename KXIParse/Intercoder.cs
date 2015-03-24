@@ -208,19 +208,25 @@ namespace KXIParse
                 {
                     if (r.LinkedSymbol.Kind.Equals("literal"))
                         return r.LinkedSymbol.SymId;
-                    if (r.Type == Semanter.RecordType.Reference)
+                    switch (r.Type)
                     {
-                        var tempVar = r.TempVariable.ToString();
-                        switch (r.LinkedSymbol.Kind)
-                        {
-                            case "ivar":
-                            case "method":
-                                return tempVar;
-                            default:
-                                throw new Exception("ToOperand(): Symbol is "+r.LinkedSymbol.Kind);
-                        }
+                        case Semanter.RecordType.Reference:
+                        case Semanter.RecordType.New:
+                        case Semanter.RecordType.NewArray:
+                            return r.TempVariable.ToString();
+                            break;
+                        case Semanter.RecordType.LVar:
+                        case Semanter.RecordType.Identifier:
+                            return r.Value;
+                            break;
+                        default:
+                            throw new Exception("In ToOperand(), trying to convert a non-supported recordtype");
                     }
                 }
+            }
+            if (r.Type == Semanter.RecordType.NewArray)
+            {
+                return r.TempVariable.ToString();
             }
             return r.Value;
         }
@@ -307,6 +313,34 @@ namespace KXIParse
             var tempVar = GetTempVarName();
             WriteQuad("", "PEEK", tempVar, "", "", "function");
             _tempVarNames.Pop();
+        }
+
+        public void WriteArray(Record r1, Record r2, Record r3)
+        {
+            WriteQuad("", "AEF", ToOperand(r2), ToOperand(r1), ToOperand(r3), "array");
+        }
+
+        public void WriteNewArray(Record r1, Record r2, Record r3)
+        {
+            var firstTemp = GetTempVarName();
+            var secondTemp = GetTempVarName();
+            WriteQuad("","MOVI",""+r3.LinkedSymbol.Data.Size,firstTemp,"","array");
+            WriteQuad("", "MUL", firstTemp, ToOperand(r1), secondTemp, "array");
+            WriteQuad("","NEW",secondTemp,ToOperand(r3),"","array");
+        }
+
+        public void WriteNewObj(Record r1)
+        {
+            var newTemp = GetTempVarName();
+            WriteQuad("", "NEWI", ""+r1.LinkedSymbol.Data.Size, newTemp,"", "newobj");
+            WriteQuad("", "FRAME", r1.Value, newTemp, "", "newobj");
+            if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
+            {
+                foreach (var a in r1.ArgumentList)
+                    WriteQuad("", "PUSH", ToOperand(a), "", "", "function");
+            }
+            WriteQuad("", "CALL", r1.Value, "", "", "newobj");
+            WriteQuad("", "PEEK", r1.TempVariable.ToString(), "", "", "function");
         }
     }
 }

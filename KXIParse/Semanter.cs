@@ -107,7 +107,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   #,");
         }
 
-        public void newArray(int lineNumber) //new array, check that operator is an int
+        public void newArray(int lineNumber,bool arrayInit) //new array, check that operator is an int
         {
             var index = _recordStack.Pop();
             if(!GetCompareString(index).Equals("int"))
@@ -115,9 +115,33 @@ namespace KXIParse
                     lineNumber, index.LinkedSymbol.Data.Type));
             var typeSar = _recordStack.Pop();
             //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
-            typeSar.Type = RecordType.NewArray;
-            _recordStack.Push(typeSar);
+            var newSar = new Record(typeSar)
+            {
+                Type = RecordType.NewArray,
+                TempVariable = _intercoder.GetTempVarName()
+            };
+            newSar.LinkedSymbol = GetSizeRecord(newSar);
+            _recordStack.Push(newSar);
+
+            if(arrayInit)
+                _intercoder.WriteNewArray(index, typeSar, newSar);
+            else
+                _intercoder.WriteArray(index, typeSar, newSar);
+
             if (DEBUG) Console.WriteLine("   newArray");
+        }
+
+        private Symbol GetSizeRecord(Record newSar)
+        {
+            //////make the sizes in here constants man!!!!
+            if (newSar.Value.Equals("int"))
+                return new Symbol {Data = new Data {Size = 4}};
+            if (newSar.Value.Equals("char"))
+                return new Symbol { Data = new Data { Size = 1 } };
+            if (newSar.Value.Equals("bool"))
+                return new Symbol { Data = new Data { Size = 1 } };
+            var symbol = _symbolTable.FirstOrDefault(s => s.Value.Kind == "Class" && s.Value.Value == newSar.Value);
+            return symbol.Value;
         }
 
         public void checkArrayIndexAssignment()
@@ -376,9 +400,19 @@ namespace KXIParse
                 symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind=="method") select s.Value).FirstOrDefault();
             if (symbol!=null)
             {
-                identifier.LinkedSymbol = symbol;
-                identifier.Type = RecordType.Identifier;
-                _recordStack.Push(identifier);
+                var newSar = new Record(identifier)
+                {
+                    LinkedSymbol = symbol,
+                    Type = RecordType.Identifier
+                };
+                if (identifier.Type == RecordType.NewArray)
+                {
+                    //what to do here?
+                    newSar.LinkedSymbol.Data.IsArray = false;
+                    newSar.Value = newSar.TempVariable.ToString();
+                    //this might cause problems, not fully tested
+                }
+                _recordStack.Push(newSar);
             }
             else
             {
@@ -448,7 +482,13 @@ namespace KXIParse
                     lineNumber, typeSar.Value));
 
             var constructorScope = "g." + typeSar.Value + "." + typeSar.Value;
-            typeSar.ArgumentList=new Stack<Record>();
+            var newSar = new Record(typeSar)
+            {
+                ArgumentList = new Stack<Record>(),
+                LinkedSymbol = sym,
+                Type = RecordType.New,
+                TempVariable = _intercoder.GetTempVarName()
+            };
             foreach (var a in sym.Data.Params)
             {
                 var argRecord = alSar.ArgumentList.Pop();
@@ -462,12 +502,12 @@ namespace KXIParse
                         string.Format(
                             "Semantic error at line {0}: Constructor for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
                             lineNumber, typeSar.Value, argName, symbol.Data.Type ?? "null", _symbolTable[a].Data.Type));
-                typeSar.ArgumentList.Push(argRecord);
+                newSar.ArgumentList.Push(argRecord);
             }
+            _recordStack.Push(newSar);
 
-            typeSar.Type = RecordType.New;
-            typeSar.LinkedSymbol = sym;
-            _recordStack.Push(typeSar);
+            _intercoder.WriteNewObj(newSar);
+
             if(DEBUG)Console.WriteLine("   newObj: " + typeSar.Value);
         }
 

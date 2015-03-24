@@ -500,7 +500,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     _semanter.arrayEnd(lastToken.LineNumber);
-                    _semanter.newArray(lastToken.LineNumber);
+                    _semanter.newArray(lastToken.LineNumber,true);
                 }
                 Expect(TokenType.ArrayEnd);
             }
@@ -650,7 +650,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     _semanter.arrayEnd(lastToken.LineNumber);
-                    _semanter.newArray(lastToken.LineNumber);
+                    _semanter.newArray(lastToken.LineNumber,false);
                 }
             }
             else

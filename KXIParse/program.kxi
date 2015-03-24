@@ -1,6 +1,7 @@
 class Cat
 {		
-	unprotected int Kitten(int a,int b)
+	unprotected int paws;
+	unprotected int Kitten(int a,bool b)
 	{
 	}
 	Cat()
@@ -10,7 +11,7 @@ class Cat
 
 void kxi2015 main() // This is the main function
 {
-	int x = 1; int y = 2;
-	Cat c = new Cat();
-	x = c.Kitten(x,y) + x * y;
+	int j = 5;
+	int k = 3;
+	int c[] = new int[j*k];
 }
