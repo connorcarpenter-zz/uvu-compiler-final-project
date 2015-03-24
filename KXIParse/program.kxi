@@ -1,27 +1,16 @@
-//	class Cat
-//	{
-//		unprotected int Meow()
-//		{
-//			return (3+5)*7;
-//		}
-//	}
+class Cat
+{		
+	unprotected int Kitten(int a,int b)
+	{
+	}
+	Cat()
+	{
+	}
+}
 
 void kxi2015 main() // This is the main function
 {
-	int a = 5;
-	int b = 4;
-	if(a>3)
-	{
-		b=b+1;
-		while(b>0)
-			b=b-1;
-	}
-	else
-	{
-		b=b+1;
-		while(b>0)
-			b=b-1;
-		a=b;
-	}
-	b=a;
+	int x = 1; int y = 2;
+	Cat c = new Cat();
+	x = c.Kitten(x,y) + x * y;
 }

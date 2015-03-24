@@ -52,7 +52,7 @@ namespace KXIParse
 
         public string GetTempVarName()
         {
-            var name = "t" + _tempVarNames.Count;
+            var name = "t" + _tempVarNames.Count ;
             _tempVarNames.Push(name);
             return name;
         }
@@ -208,8 +208,18 @@ namespace KXIParse
                 {
                     if (r.LinkedSymbol.Kind.Equals("literal"))
                         return r.LinkedSymbol.SymId;
-                    if (r.Type==Semanter.RecordType.Reference && r.LinkedSymbol.Kind.Equals("ivar"))
-                        return r.TempVariable.ToString();
+                    if (r.Type == Semanter.RecordType.Reference)
+                    {
+                        var tempVar = r.TempVariable.ToString();
+                        switch (r.LinkedSymbol.Kind)
+                        {
+                            case "ivar":
+                            case "method":
+                                return tempVar;
+                            default:
+                                throw new Exception("ToOperand(): Symbol is "+r.LinkedSymbol.Kind);
+                        }
+                    }
                 }
             }
             return r.Value;
@@ -257,7 +267,7 @@ namespace KXIParse
 
         public void WriteReturn(string type,Record r)
         {
-            if(type.Equals("void"))
+            if(type.Equals("void") || r==null)
                 WriteQuad("","RTN","","","","return");
             else
                 WriteQuad("", "RETURN", ToOperand(r), "", "", "return");
@@ -276,8 +286,27 @@ namespace KXIParse
         public void End()
         {
             var lastOrDefault = IntercodeList.LastOrDefault();
-            if (lastOrDefault != null && lastOrDefault.Operand3.Equals("OPENLABELSLOT"))
+            if (lastOrDefault != null && lastOrDefault.Operand3 != null && lastOrDefault.Operand3.Equals("OPENLABELSLOT"))
                 IntercodeList.Remove(lastOrDefault);
+        }
+
+        public void WriteFunctionCall(Record r1, Record r2)
+        {
+            var op2 = (r1 == null) ? "this" : ToOperand(r1);
+            WriteQuad("","FRAME",ToOperand(r2),op2,"","function");
+            if (r2.ArgumentList != null && r2.ArgumentList.Count > 0)
+            {
+                foreach (var a in r2.ArgumentList)
+                    WriteQuad("","PUSH",ToOperand(a),"","","function");
+            }
+            WriteQuad("", "CALL", ToOperand(r2),"","","function");
+        }
+
+        public void WriteFunctionPeek(Record r)
+        {
+            var tempVar = GetTempVarName();
+            WriteQuad("", "PEEK", tempVar, "", "", "function");
+            _tempVarNames.Pop();
         }
     }
 }

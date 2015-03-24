@@ -164,10 +164,23 @@ namespace KXIParse
         {
             var argumentList = _recordStack.Pop();
             var functionName = _recordStack.Pop();
-            functionName.Type = RecordType.Func;
-            functionName.ArgumentList = argumentList.ArgumentList;
-            _recordStack.Push(functionName);
+            var newRecord = new Record(functionName)
+            {
+                Type = RecordType.Func, 
+                ArgumentList = argumentList.ArgumentList
+            };
+
+            _intercoder.WriteFunctionCall((_recordStack.Count>0) ? _recordStack.Peek() : null, newRecord);
+
+            _recordStack.Push(newRecord);
+
             if (DEBUG) Console.WriteLine("   Func: " + functionName.Value);
+        }
+
+        public void funcPeek()
+        {
+            var rec = _recordStack.Peek();
+            _intercoder.WriteFunctionPeek(rec);
         }
 
         public void checkSpawn(string scope, int lineNumber)
@@ -300,37 +313,43 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   checkRelease");
         }
 
-        public void checkReturn(string scope,int lineNumber)
+        public void checkReturn(string scope,int lineNumber,bool hasValue)
         {
-            EvalOp("checkReturn",lineNumber);
-
-            var expression_sar = _recordStack.Count>0 ? _recordStack.Pop() : null;
-            var expCompare = expression_sar==null ? "void" : GetCompareString(expression_sar);
-
             var scopes = scope.Split('.');
             var methodName = scopes[scopes.Length - 1];
-            var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
+            Record expressionSar = null;
+            string expCompare;
             string methodCompare;
             string methodType;
-            if (methodName.Equals("main") && methodScope.Equals("g"))
+            if (hasValue)
             {
-                methodCompare = "void";
-                methodType = "void";
+                EvalOp("checkReturn", lineNumber);
+                expressionSar = _recordStack.Pop();
+                expCompare = (methodName.Equals("main") && scope.Equals("g.main")) ? "void" : GetCompareString(expressionSar);
+                var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
+                var method =
+                    _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value == methodName)
+                        .Select(s => s.Value)
+                        .FirstOrDefault();
+                if (method == null)
+                    throw new Exception(
+                        string.Format("Semantic error at line {0}: Cannot find method defined for this scope",
+                            lineNumber));
+                methodCompare = GetCompareString(new Record(RecordType.Identifier, "", method));
+                methodType = method.Data.Type;
             }
             else
             {
-                var method = _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value==methodName).Select(s => s.Value).FirstOrDefault();
-                if(method == null)
-                    throw new Exception(string.Format("Semantic error at line {0}: Cannot find method defined for this scope",lineNumber));
-                methodCompare = GetCompareString(new Record(RecordType.Identifier, "", method));
-                methodType = method.Data.Type;
+                expCompare = "void";
+                methodCompare = "void";
+                methodType = "void";
             }
 
             if (!expCompare.Equals(methodCompare))
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to return a value of type '{1}' from method '{2}' which is set to return value of type '{3}'",
                     lineNumber, expCompare, methodName, methodType));
 
-            _intercoder.WriteReturn(methodType,expression_sar);
+            _intercoder.WriteReturn(methodType,expressionSar);
 
             if (DEBUG) Console.WriteLine("   checkReturn");
         }
@@ -350,11 +369,11 @@ namespace KXIParse
             var methodName = scope.Split('.').Last();
             var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
             var inMethod = _symbolTable.Any(
-                s => s.Value.Kind == "method" && s.Value.Value == methodName && s.Value.Scope == methodScope);
+                s => (s.Value.Kind == "method" || s.Value.Kind == "Constructor") && s.Value.Value == methodName && s.Value.Scope == methodScope);
 
             var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind=="lvar" || s.Value.Kind=="param") select s.Value).FirstOrDefault();
             if (symbol == null && inMethod)
-                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && s.Value.Kind == "ivar" select s.Value).FirstOrDefault();
+                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind=="method") select s.Value).FirstOrDefault();
             if (symbol!=null)
             {
                 identifier.LinkedSymbol = symbol;
@@ -378,13 +397,22 @@ namespace KXIParse
                           select s.Value).FirstOrDefault();
             if (symbol != null)
             {
-                var newRecord = new Record(childId);
-                newRecord.Type = RecordType.Reference;
-                newRecord.LinkedSymbol = symbol;
-                newRecord.TempVariable = _intercoder.GetTempVarName();
+                var newRecord = new Record(childId)
+                {
+                    Type = RecordType.Reference,
+                    LinkedSymbol = symbol,
+                    TempVariable = _intercoder.GetTempVarName()
+                };
                 _recordStack.Push(newRecord);
 
-                _intercoder.WriteReference(parentId,childId,newRecord);
+                if (childId.Type != RecordType.Func)
+                //{
+                //    _intercoder.WriteFunctionCall(parentId, childId, newRecord);
+                //}
+                //else
+                {
+                    _intercoder.WriteReference(parentId, childId, newRecord);
+                }
             }
             else
             {

@@ -369,7 +369,13 @@ namespace KXIParse
                     });
             }
 
+            //go into method's scope
+            _scope.Add(name);
+
             MethodBody();
+
+            //leave
+            outScope(name);
         }
 
         private bool AssignmentExpression()
@@ -667,6 +673,8 @@ namespace KXIParse
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
                     _semanter.func();
+                    if (!Peek(TokenType.Semicolon))
+                        _semanter.funcPeek();
                 }
             }
         }
@@ -894,10 +902,19 @@ namespace KXIParse
             }
             if (Accept(TokenType.Return))
             {
-                Expression();
-                Expect(TokenType.Semicolon);
-                if (Semanting)
-                    _semanter.checkReturn(GetScopeString(),lastToken.LineNumber);
+                if (Accept(TokenType.Semicolon))
+                {
+                    if (Semanting)
+                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber, false);
+                }
+                else
+                {
+                    Expression();
+                    Expect(TokenType.Semicolon);
+                    if (Semanting)
+                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber,true);
+                }
+                
                 return;
             }
             if (Accept(TokenType.Cout))
