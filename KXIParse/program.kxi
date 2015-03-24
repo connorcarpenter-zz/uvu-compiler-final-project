@@ -1,8 +1,14 @@
 class Cat
 {
-	unprotected int laws = 3;
+	unprotected int paws = 3 * 3;
+	unprotected Cat Kitten()
+	{
+		Cat k = new Cat(paws);
+		return k;
+	}
 	Cat(int j)
 	{
+		paws = paws + j;
 	}
 }
 
@@ -10,5 +16,5 @@ void kxi2015 main() // This is the main function
 {
 	Cat c[] = new Cat[4];
 	c[3] = new Cat(4);
-	cout << c[3].laws;
+	cout << c[3].paws;
 }

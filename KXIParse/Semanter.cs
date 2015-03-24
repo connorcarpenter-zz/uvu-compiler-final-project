@@ -397,7 +397,7 @@ namespace KXIParse
 
             var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind=="lvar" || s.Value.Kind=="param") select s.Value).FirstOrDefault();
             if (symbol == null && inMethod)
-                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind=="method") select s.Value).FirstOrDefault();
+                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind == "method" || s.Value.Kind == "Constructor") select s.Value).FirstOrDefault();
             if (symbol!=null)
             {
                 var newSar = new Record(identifier)

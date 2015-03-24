@@ -834,7 +834,7 @@ namespace KXIParse
 
             if (Syntaxing)
             {
-                if (_insertTokens != null && _insertTokens.Count > 0)
+                if (_insertTokens != null && _insertTokens.Count > 0 && !ConstructorCreated && _scope.Count()>=3 && _scope[1].Equals(_scope[2]))
                 {
                     foreach(var r in _insertTokens)
                         _recordTokens.Add(r);
