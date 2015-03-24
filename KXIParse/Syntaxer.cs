@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 
 namespace KXIParse
@@ -9,13 +10,18 @@ namespace KXIParse
         private const bool DEBUGTOKENS = false;
         private const bool DEBUGMETA = false;
         private static Token lastToken;
-        private readonly List<Token> _tokens;
+        private List<Token> _tokens;
         private static List<Token> _tokensClone;
         private static List<string> _scope;
         private static Dictionary<string,Symbol> _syntaxSymbolTable;
         private bool Syntaxing { get; set; }
         private bool Semanting { get; set; }
+        private bool ConstructorCreated { get; set; }
         private static Semanter _semanter;
+        private static List<Token> _recordTokens;
+        private static List<Token> _insertTokens;
+        private static bool _recording = true;
+ 
 
         public Syntaxer(IEnumerable<Token> tokenList)
         {
@@ -26,8 +32,11 @@ namespace KXIParse
         {
             Syntaxing = true;
             Semanting = false;
+            _recordTokens = new List<Token>();
+            _insertTokens = new List<Token>();
             InitTokens();
             StartSymbol();
+            _tokens = _recordTokens;
 
             return _syntaxSymbolTable;
         }
@@ -36,6 +45,8 @@ namespace KXIParse
         {
             Syntaxing = false;
             Semanting = true;
+            _recordTokens = null;
+            _insertTokens = null;
             var icodeList = new List<Quad>();
             _semanter = new Semanter(this,symbolTable,icodeList);
             InitTokens();
@@ -99,6 +110,13 @@ namespace KXIParse
             if (!TokenData.EqualTo(GetToken().Type, value))
                 return false;
             lastToken = GetToken();
+
+            if (_recordTokens!=null && _insertTokens!=null)
+            {
+                if (_recording) _recordTokens.Add(lastToken);
+                else _insertTokens.Add(lastToken);
+            }
+
             NextToken();
             DebugTracking();
             return true;
@@ -169,10 +187,43 @@ namespace KXIParse
             //go into class scope
             _scope.Add(className);
 
+            if(Syntaxing)
+                ConstructorCreated = false;
+
             //instance variables, ect.
             while (Peek(TokenType.Modifier) || Peek(TokenType.Identifier))
             {
                 ClassMemberDeclaration();
+            }
+
+            if (Syntaxing)
+            {
+                if (!ConstructorCreated)
+                {
+                    _recordTokens.Add(new Token(TokenType.Identifier,className,lastToken.LineNumber));
+                    _recordTokens.Add(new Token(TokenType.ParenBegin, "(", lastToken.LineNumber));
+                    _recordTokens.Add(new Token(TokenType.ParenEnd, ")", lastToken.LineNumber));
+
+                    var symId = GenerateSymId("Constructor");
+                    _syntaxSymbolTable.Add(symId,
+                        new Symbol()
+                        {
+                            Data = new Data { Type = className },
+                            Kind = "Constructor",
+                            Scope = GetScopeString(),
+                            SymId = symId,
+                            Value = className
+                        });
+
+                    _recordTokens.Add(new Token(TokenType.BlockBegin, "{", lastToken.LineNumber));
+                    foreach(var r in _insertTokens)
+                        _recordTokens.Add(r);
+                    _recordTokens.Add(new Token(TokenType.BlockEnd, "}", lastToken.LineNumber));
+
+                    _insertTokens.Clear();
+
+                    ConstructorCreated = true;
+                }
             }
 
             //go out of scope
@@ -252,12 +303,26 @@ namespace KXIParse
                     _semanter.vPush(GetScopeString(), name, isArray,true);
                 if (Peek(TokenType.Assignment))
                 {
+                    if (Syntaxing)
+                    {
+                        _recording = false;
+                        _insertTokens.Add(lastToken);
+                    }
+
                     Expect(TokenType.Assignment);
                     if(Semanting)
                         _semanter.oPush(Semanter.Operator.Assignment,lastToken.LineNumber);
                     AssignmentExpression();
                 }
                 Expect(TokenType.Semicolon);
+                if (Syntaxing)
+                {
+                    if (!_recording)
+                    {
+                        _recording = true;
+                        _recordTokens.Add(lastToken);
+                    }
+                }
                 if(Semanting)
                     _semanter.EOE(lastToken.LineNumber);
 
@@ -766,6 +831,18 @@ namespace KXIParse
             if (DEBUGMETA) Console.WriteLine("--Method Body");
 
             Expect(TokenType.BlockBegin);
+
+            if (Syntaxing)
+            {
+                if (_insertTokens != null && _insertTokens.Count > 0)
+                {
+                    foreach(var r in _insertTokens)
+                        _recordTokens.Add(r);
+                    _insertTokens.Clear();
+                    ConstructorCreated = true;
+                }
+            }
+
             while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
                 VariableDeclaration();
             while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))

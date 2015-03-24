@@ -1,17 +1,14 @@
 class Cat
-{		
-	unprotected int paws;
-	unprotected int Kitten(int a,bool b)
-	{
-	}
-	Cat()
+{
+	unprotected int laws = 3;
+	Cat(int j)
 	{
 	}
 }
 
 void kxi2015 main() // This is the main function
 {
-	int j = 5;
-	int k = 3;
-	int c[] = new int[j*k];
+	Cat c[] = new Cat[4];
+	c[3] = new Cat(4);
+	cout << c[3].laws;
 }
