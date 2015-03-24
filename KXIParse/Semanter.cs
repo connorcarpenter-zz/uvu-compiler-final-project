@@ -32,10 +32,11 @@ namespace KXIParse
         public enum RecordType
         {
             Identifier,Temporary,BAL,EAL,Func,Type,
-            Variable,
+            IVar,LVar,
             New,
             Literal,
-            NewArray
+            NewArray,
+            Reference
         }
 
         public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym","void" };
@@ -54,9 +55,18 @@ namespace KXIParse
                 Value = value;
                 LinkedSymbol = symbol;
             }
+
+            public Record(Record other)
+            {
+                this.ArgumentList = other.ArgumentList;
+                this.LinkedSymbol = other.LinkedSymbol;
+                this.TempVariable = other.TempVariable;
+                this.Type = other.Type;
+                this.Value = other.Value;
+            }
         }
 
-        public Semanter(Syntaxer s,Dictionary<string, Symbol> st,List<string> iCodeList)
+        public Semanter(Syntaxer s,Dictionary<string, Symbol> st,List<Quad> iCodeList)
         {
             _operatorStack = new Stack<Operator>();
             _recordStack = new Stack<Record>();
@@ -172,7 +182,25 @@ namespace KXIParse
             var expression_sar = _recordStack.Pop();
             if(!GetCompareString(expression_sar).Equals("bool"))
                 throw new Exception(string.Format("Semantic error at line {0}: 'If' expression does not evaluate to a boolean", lineNumber));
+
+            _intercoder.WriteIf(expression_sar);
+
             if (DEBUG) Console.WriteLine("   checkIf");
+        }
+
+        public void writeSkipIf(bool isElse)
+        {
+            _intercoder.WriteSkipIf(isElse);
+        }
+
+        public void writeElse()
+        {
+            _intercoder.WriteElse();
+        }
+
+        public void beginWhile()
+        {
+            _intercoder.WriteBeginWhile();
         }
 
         public void checkWhile(int lineNumber)
@@ -180,7 +208,15 @@ namespace KXIParse
             var expression_sar = _recordStack.Pop();
             if (!GetCompareString(expression_sar).Equals("bool"))
                 throw new Exception(string.Format("Semantic error at line {0}: 'While' expression does not evaluate to a boolean", lineNumber));
+
+            _intercoder.WriteMiddleWhile(expression_sar);
+
             if (DEBUG) Console.WriteLine("   checkWhile");
+        }
+
+        public void endWhile()
+        {
+            _intercoder.WriteEndWhile();
         }
 
         public void CD(string name,string scope, int lineNumber)
@@ -226,6 +262,9 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("int") && !compare_str.Equals("char"))
                 throw new Exception(string.Format("Semantic error at line {0}: Variable cannot get input from Cin", lineNumber));
+
+            _intercoder.WriteCin(expression_sar);
+
             if (DEBUG) Console.WriteLine("   checkCin");
         }
 
@@ -237,6 +276,9 @@ namespace KXIParse
             var compare_str = GetCompareString(expression_sar);
             if (!compare_str.Equals("int") && !compare_str.Equals("char"))
                 throw new Exception(string.Format("Semantic error at line {0}: Variable cannot be outputted to Cout", lineNumber));
+
+            _intercoder.WriteCout(expression_sar);
+
             if (DEBUG) Console.WriteLine("   checkCout");
         }
         
@@ -262,19 +304,34 @@ namespace KXIParse
         {
             EvalOp("checkReturn",lineNumber);
 
-            var expression_sar = _recordStack.Pop();
-            var expCompare = GetCompareString(expression_sar);
+            var expression_sar = _recordStack.Count>0 ? _recordStack.Pop() : null;
+            var expCompare = expression_sar==null ? "void" : GetCompareString(expression_sar);
 
             var scopes = scope.Split('.');
             var methodName = scopes[scopes.Length - 1];
             var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
-            var method = _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value==methodName).Select(s => s.Value).FirstOrDefault();
-            if(method == null)
-                throw new Exception(string.Format("Semantic error at line {0}: Cannot find method defined for this scope",lineNumber));
-            var methodCompare = GetCompareString(new Record(RecordType.Identifier, "", method));
-            if(!expCompare.Equals(methodCompare))
+            string methodCompare;
+            string methodType;
+            if (methodName.Equals("main") && methodScope.Equals("g"))
+            {
+                methodCompare = "void";
+                methodType = "void";
+            }
+            else
+            {
+                var method = _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value==methodName).Select(s => s.Value).FirstOrDefault();
+                if(method == null)
+                    throw new Exception(string.Format("Semantic error at line {0}: Cannot find method defined for this scope",lineNumber));
+                methodCompare = GetCompareString(new Record(RecordType.Identifier, "", method));
+                methodType = method.Data.Type;
+            }
+
+            if (!expCompare.Equals(methodCompare))
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to return a value of type '{1}' from method '{2}' which is set to return value of type '{3}'",
-                    lineNumber,expCompare,methodName,method.Data.Type));
+                    lineNumber, expCompare, methodName, methodType));
+
+            _intercoder.WriteReturn(methodType,expression_sar);
+
             if (DEBUG) Console.WriteLine("   checkReturn");
         }
 
@@ -321,8 +378,13 @@ namespace KXIParse
                           select s.Value).FirstOrDefault();
             if (symbol != null)
             {
-                childId.LinkedSymbol = symbol;
-                _recordStack.Push(childId);
+                var newRecord = new Record(childId);
+                newRecord.Type = RecordType.Reference;
+                newRecord.LinkedSymbol = symbol;
+                newRecord.TempVariable = _intercoder.GetTempVarName();
+                _recordStack.Push(newRecord);
+
+                _intercoder.WriteReference(parentId,childId,newRecord);
             }
             else
             {
@@ -333,6 +395,7 @@ namespace KXIParse
 
         public void oPush(Operator o,int lineNumber) //operator push
         {
+            if (OpPriority[o]!=0)
             if (_operatorStack.Count > 0)
             {
                 var nextOp = _operatorStack.Peek();
@@ -380,20 +443,21 @@ namespace KXIParse
             if(DEBUG)Console.WriteLine("   newObj: " + typeSar.Value);
         }
 
-        public void vPush(string scope,string vName,bool isArray)
+        public void vPush(string scope,string vName,bool isArray,bool isField)
         {
             var sym = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == vName select s.Value).FirstOrDefault();
             if(sym==null)throw new Exception("Semantic Error: write some better error text here, but this vpush should be getting an associated symbol");
             if(isArray != !(sym.Data==null || sym.Data.IsArray==false))
                 throw new Exception("Semantic Error: loaded symbol and scanned symbol do not match, array-wise....");
-            _recordStack.Push(new Record(RecordType.Variable, vName, sym));
+            _recordStack.Push(new Record(isField ? RecordType.IVar : RecordType.LVar, vName, sym));
             if (DEBUG) Console.WriteLine("   vPush: " + vName);
         }
 
-        public void lPush(TokenType type)
+        public void lPush(TokenType type, Symbol symbol)
         {
             var name = TokenData.Get()[type].Name;
-            _recordStack.Push(new Record(RecordType.Literal, TokenData.Get()[type].Name, null));
+            var record = new Record(RecordType.Literal, name, symbol);
+            _recordStack.Push(record);
             if (DEBUG) Console.WriteLine("   lPush: " + name);
         }
 
@@ -449,7 +513,7 @@ namespace KXIParse
                             _intercoder.GetTempVarName(),
                             new Symbol { Data = new Data { Type = type } });
                     result.TempVariable = i1.Value + "." + i2.Value;
-                        _recordStack.Push(result);
+                     _recordStack.Push(result);
                 }
 
                 _intercoder.WriteOperation(nextOp, i1, i2, result);
@@ -470,8 +534,10 @@ namespace KXIParse
             switch (r.Type)
             {
                 case RecordType.New:
-                case RecordType.Variable:
+                case RecordType.LVar:
+                case RecordType.IVar:
                 case RecordType.Identifier:
+                case RecordType.Reference:
                 case RecordType.Temporary:
                 case RecordType.Func:
                     return r.LinkedSymbol.Data.IsArray ? r.LinkedSymbol.Data.Type + "[]" : r.LinkedSymbol.Data.Type;
@@ -490,6 +556,12 @@ namespace KXIParse
             {"Character","char"},
             {"Bool","bool"}
         };
+
+
+        public void End()
+        {
+            _intercoder.End();
+        }
     }
 
 }

@@ -32,11 +32,11 @@ namespace KXIParse
             return _syntaxSymbolTable;
         }
 
-        public List<string> SemanticPass(Dictionary<string, Symbol> symbolTable)
+        public List<Quad> SemanticPass(Dictionary<string, Symbol> symbolTable)
         {
             Syntaxing = false;
             Semanting = true;
-            var icodeList = new List<string>();
+            var icodeList = new List<Quad>();
             _semanter = new Semanter(this,symbolTable,icodeList);
             InitTokens();
             StartSymbol();
@@ -131,7 +131,16 @@ namespace KXIParse
             Expect(TokenType.ParenBegin);
             Expect(TokenType.ParenEnd);
 
+            //go into main scope
+            _scope.Add("main");
+
             MethodBody();
+            
+            //go out of scope
+            outScope("main");
+
+            if(Semanting)
+                _semanter.End();
         }
 
         private void ClassDeclaration()
@@ -240,7 +249,7 @@ namespace KXIParse
                     Expect(TokenType.ArrayEnd);
                 }
                 if (Semanting)
-                    _semanter.vPush(GetScopeString(), name, isArray);
+                    _semanter.vPush(GetScopeString(), name, isArray,true);
                 if (Peek(TokenType.Assignment))
                 {
                     Expect(TokenType.Assignment);
@@ -551,7 +560,27 @@ namespace KXIParse
                 }
                 else if (Accept(TokenType.Character))
                 {
-                    if (Semanting) _semanter.lPush(lastToken.Type);
+                    if (Semanting)
+                    {
+                        var symId = GenerateSymId("Literal");
+                        var symbol = new Symbol()
+                        {
+                            Data = new Data()
+                            {
+                                Type = TokenData.Get()[lastToken.Type].Name,
+                                AccessMod = "unprotected",
+                                IsArray = false
+                            },
+                            Kind = "literal",
+                            Scope = GetScopeString(),
+                            SymId = symId,
+                            Value = lastToken.Value
+                        };
+                        _syntaxSymbolTable.Add(symId,symbol);
+
+                        _semanter.lPush(lastToken.Type,symbol);
+                    }
+                        
                 }
                 else if (Accept(TokenType.Identifier))
                 {
@@ -569,7 +598,26 @@ namespace KXIParse
                          Accept(TokenType.Null) ||
                          Accept(TokenType.Number))
                 {
-                    if (Semanting) _semanter.lPush(lastToken.Type);
+                    if (Semanting)
+                    {
+                        var symId = GenerateSymId("Literal");
+                        var symbol = new Symbol()
+                        {
+                            Data = new Data()
+                            {
+                                Type = TokenData.Get()[lastToken.Type].Name,
+                                AccessMod = "unprotected",
+                                IsArray = false
+                            },
+                            Kind = "literal",
+                            Scope = GetScopeString(),
+                            SymId = symId,
+                            Value = lastToken.Value
+                        };
+                        _syntaxSymbolTable.Add(symId, symbol);
+
+                        _semanter.lPush(lastToken.Type,symbol);
+                    }
                 }
                 var backupList = new List<Token>(_tokensClone);
                 if (!ExpressionZ())
@@ -741,7 +789,7 @@ namespace KXIParse
             }
 
             if (Semanting)
-                _semanter.vPush(GetScopeString(), name,isArray);
+                _semanter.vPush(GetScopeString(), name,isArray,false);
 
             if (Accept(TokenType.Assignment))
             {
@@ -800,14 +848,36 @@ namespace KXIParse
                 }
                 Statement();
                 if (Accept(TokenType.Else))
+                {
+                    if (Semanting)
+                    {
+                        _semanter.writeSkipIf(true);
+                    }
+
                     Statement();
+
+                    if (Semanting)
+                    {
+                        _semanter.writeElse();
+                    }
+                }
+                else //this is ironic
+                {
+                    if (Semanting)
+                    {
+                        _semanter.writeSkipIf(false);
+                    }
+                }
                 return;
             }
             if (Accept(TokenType.While))
             {
                 Expect(TokenType.ParenBegin);
                 if (Semanting)
+                {
                     _semanter.oPush(Semanter.Operator.ParenBegin, lastToken.LineNumber);
+                    _semanter.beginWhile();
+                }
                 Expression();
                 Expect(TokenType.ParenEnd);
                 if (Semanting)
@@ -816,6 +886,10 @@ namespace KXIParse
                     _semanter.checkWhile(lastToken.LineNumber);
                 }
                 Statement();
+                if (Semanting)
+                {
+                    _semanter.endWhile();
+                }
                 return;
             }
             if (Accept(TokenType.Return))
@@ -838,10 +912,24 @@ namespace KXIParse
             if (Accept(TokenType.Cin))
             {
                 Expect(TokenType.Insertion);
-                Expression();
-                Expect(TokenType.Semicolon);
+                //Expression();
+
+                //this makes more sense to me, because reading into an expression makes no sense
+                Expect(TokenType.Identifier);
+
+                if (Semanting)
+                    _semanter.iPush(lastToken.Value);
+                if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
+                    FnArrMember();
+                if (Semanting)
+                    _semanter.iExist(GetScopeString(), lastToken.LineNumber);
+                if (Peek(TokenType.Period))
+                    MemberRefz();
                 if (Semanting)
                     _semanter.checkCin(lastToken.LineNumber);
+
+                Expect(TokenType.Semicolon);
+                
                 return;
             }
             if (Accept(TokenType.Spawn))

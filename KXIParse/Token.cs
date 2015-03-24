@@ -153,7 +153,7 @@ namespace KXIParse
             {TokenType.Protected, new TokenTypeData("Protected","^protected",TokenType.Modifier)},
             {TokenType.Unprotected, new TokenTypeData("Unprotected","^unprotected",TokenType.Modifier)},
             {TokenType.And, new TokenTypeData("And","^&&")},
-            {TokenType.Or, new TokenTypeData("Or","^||")},
+            {TokenType.Or, new TokenTypeData("Or","^\\|\\|")},
             {TokenType.Equals, new TokenTypeData("Equals","^==")},
             {TokenType.NotEquals, new TokenTypeData("NotEquals","^!=")},
             {TokenType.LessOrEqual, new TokenTypeData("LessOrEqual","^<=")},

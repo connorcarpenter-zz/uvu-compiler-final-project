@@ -1,8 +1,27 @@
+//	class Cat
+//	{
+//		unprotected int Meow()
+//		{
+//			return (3+5)*7;
+//		}
+//	}
+
 void kxi2015 main() // This is the main function
 {
-	int w = 4;
-	int x = 5;
-	int y = 6;
-	int z = 7;
-	int a = w * x + y / z;
+	int a = 5;
+	int b = 4;
+	if(a>3)
+	{
+		b=b+1;
+		while(b>0)
+			b=b-1;
+	}
+	else
+	{
+		b=b+1;
+		while(b>0)
+			b=b-1;
+		a=b;
+	}
+	b=a;
 }
