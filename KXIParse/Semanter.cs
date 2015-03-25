@@ -194,7 +194,7 @@ namespace KXIParse
                 ArgumentList = argumentList.ArgumentList
             };
 
-            _intercoder.WriteFunctionCall((_recordStack.Count>0) ? _recordStack.Peek() : null, newRecord);
+            //_intercoder.WriteFunctionCall((_recordStack.Count>0) ? _recordStack.Peek() : null, newRecord);
 
             _recordStack.Push(newRecord);
 
@@ -378,9 +378,13 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   checkReturn");
         }
 
-        public void iPush(string iname) //identifier push
+        public void iPush(string scope,string iname,int lineNumber) //identifier push
         {
-            _recordStack.Push(new Record(RecordType.Identifier, iname, null));
+            var record = new Record(RecordType.Identifier, iname, null);
+            var symbol = GetSymbol(scope, record);
+            if (symbol != null)
+                record.LinkedSymbol = symbol;
+            _recordStack.Push(record);
             if (DEBUG) Console.WriteLine("   iPush: " + iname);
         }
 
@@ -389,15 +393,8 @@ namespace KXIParse
             var identifier = _recordStack.Pop();
 
             //figure out if this is in a method
-            
-            var methodName = scope.Split('.').Last();
-            var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
-            var inMethod = _symbolTable.Any(
-                s => (s.Value.Kind == "method" || s.Value.Kind == "Constructor") && s.Value.Value == methodName && s.Value.Scope == methodScope);
 
-            var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind=="lvar" || s.Value.Kind=="param") select s.Value).FirstOrDefault();
-            if (symbol == null && inMethod)
-                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind == "method" || s.Value.Kind == "Constructor") select s.Value).FirstOrDefault();
+            var symbol = GetSymbol(scope, identifier);
             if (symbol!=null)
             {
                 var newSar = new Record(identifier)
@@ -421,6 +418,20 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   iExist: " + identifier.Value);
         }
 
+        private Symbol GetSymbol(string scope,Record identifier)
+        {
+            var methodName = scope.Split('.').Last();
+            var methodScope = methodName.Equals("g") ? "g" : scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
+            var inMethod = _symbolTable.Any(
+                s => (s.Value.Kind == "method" || s.Value.Kind == "Constructor") && s.Value.Value == methodName && s.Value.Scope == methodScope);
+
+            var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind == "lvar" || s.Value.Kind == "param" || s.Value.Kind == "Class") select s.Value).FirstOrDefault();
+            if (symbol == null && inMethod)
+                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind == "method" || s.Value.Kind == "Constructor") select s.Value).FirstOrDefault();
+
+            return symbol;
+        }
+
         public void rExist(int lineNumber) //member reference identifier exists
         {
             var childId = _recordStack.Pop();
@@ -439,11 +450,11 @@ namespace KXIParse
                 };
                 _recordStack.Push(newRecord);
 
-                if (childId.Type != RecordType.Func)
-                //{
-                //    _intercoder.WriteFunctionCall(parentId, childId, newRecord);
-                //}
-                //else
+                if (childId.Type == RecordType.Func)
+                {
+                    _intercoder.WriteFunctionCall((_recordStack.Count > 0) ? _recordStack.Peek() : null, newRecord,childId,parentId);
+                }
+                else
                 {
                     _intercoder.WriteReference(parentId, childId, newRecord);
                 }
@@ -506,7 +517,10 @@ namespace KXIParse
             }
             _recordStack.Push(newSar);
 
-            _intercoder.WriteNewObj(newSar);
+            var classSymbol = GetSymbol("g", typeSar);
+            if (classSymbol != null)
+                typeSar.LinkedSymbol = classSymbol;
+            _intercoder.WriteNewObj(newSar,typeSar);
 
             if(DEBUG)Console.WriteLine("   newObj: " + typeSar.Value);
         }

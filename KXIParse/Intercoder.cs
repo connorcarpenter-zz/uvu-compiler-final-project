@@ -107,7 +107,7 @@ namespace KXIParse
         {
             var operation = "REF";
             var operand1 = ToOperand(r1);
-            var operand2 = ToOperand(r2);
+            var operand2 = r3.LinkedSymbol.SymId;
             var operand3 = ToOperand(r3);
 
             WriteQuad("", operation, operand1, operand2, operand3,"reference");
@@ -217,7 +217,7 @@ namespace KXIParse
                             break;
                         case Semanter.RecordType.LVar:
                         case Semanter.RecordType.Identifier:
-                            return r.Value;
+                            return r.LinkedSymbol.SymId;
                             break;
                         default:
                             throw new Exception("In ToOperand(), trying to convert a non-supported recordtype");
@@ -296,16 +296,15 @@ namespace KXIParse
                 IntercodeList.Remove(lastOrDefault);
         }
 
-        public void WriteFunctionCall(Record r1, Record r2)
+        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4)
         {
-            var op2 = (r1 == null) ? "this" : ToOperand(r1);
-            WriteQuad("","FRAME",ToOperand(r2),op2,"","function");
+            WriteQuad("","FRAME",r1.LinkedSymbol.SymId,r4.TempVariable.ToString(),"","function");
             if (r2.ArgumentList != null && r2.ArgumentList.Count > 0)
             {
                 foreach (var a in r2.ArgumentList)
                     WriteQuad("","PUSH",ToOperand(a),"","","function");
             }
-            WriteQuad("", "CALL", ToOperand(r2),"","","function");
+            WriteQuad("", "CALL", r1.LinkedSymbol.SymId, "", "", "function");
         }
 
         public void WriteFunctionPeek(Record r)
@@ -329,17 +328,17 @@ namespace KXIParse
             WriteQuad("","NEW",secondTemp,ToOperand(r3),"","array");
         }
 
-        public void WriteNewObj(Record r1)
+        public void WriteNewObj(Record r1,Record r2)
         {
             var newTemp = GetTempVarName();
             WriteQuad("", "NEWI", ""+r1.LinkedSymbol.Data.Size, newTemp,"", "newobj");
-            WriteQuad("", "FRAME", r1.Value, newTemp, "", "newobj");
+            WriteQuad("", "FRAME", r2.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
             {
                 foreach (var a in r1.ArgumentList)
                     WriteQuad("", "PUSH", ToOperand(a), "", "", "function");
             }
-            WriteQuad("", "CALL", r1.Value, "", "", "newobj");
+            WriteQuad("", "CALL", r1.LinkedSymbol.SymId, "", "", "newobj");
             WriteQuad("", "PEEK", r1.TempVariable.ToString(), "", "", "function");
         }
     }

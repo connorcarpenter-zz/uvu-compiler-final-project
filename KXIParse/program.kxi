@@ -14,7 +14,15 @@ class Cat
 
 void kxi2015 main() // This is the main function
 {
-	Cat c[] = new Cat[4];
-	c[3] = new Cat(4);
-	cout << c[3].paws;
+	int size = 10;
+	int i = 1;
+	Cat c[] = new Cat[size];
+	c[1] = new Cat(i);
+	
+	while(i<size)
+	{
+		c[i]=c[i-1].Kitten();
+		cout << c[i].paws;
+		i=i+1;
+	}
 }

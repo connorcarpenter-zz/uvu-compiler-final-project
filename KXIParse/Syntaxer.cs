@@ -71,6 +71,8 @@ namespace KXIParse
                     output += ".";
             }
 
+            if (output.Equals("g.")) return "g";
+
         return output;
         }
 
@@ -451,7 +453,7 @@ namespace KXIParse
             {
                 if (Semanting)
                 {
-                    _semanter.iPush(lastToken.Value);
+                    _semanter.iPush(GetScopeString(), lastToken.Value,lastToken.LineNumber);
                     _semanter.iExist(GetScopeString(),lastToken.LineNumber);
                 }
                 return true;
@@ -656,7 +658,7 @@ namespace KXIParse
                 else if (Accept(TokenType.Identifier))
                 {
                     if(Semanting)
-                        _semanter.iPush(lastToken.Value);
+                        _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
                     if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                         FnArrMember();
                     if (Semanting)
@@ -751,7 +753,7 @@ namespace KXIParse
             Expect(TokenType.Period);
             Expect(TokenType.Identifier);
             if (Semanting)
-                _semanter.iPush(lastToken.Value);
+                _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
             
             if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                 FnArrMember();
@@ -1012,7 +1014,7 @@ namespace KXIParse
                 Expect(TokenType.Identifier);
 
                 if (Semanting)
-                    _semanter.iPush(lastToken.Value);
+                    _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
                 if (Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                     FnArrMember();
                 if (Semanting)
@@ -1033,7 +1035,7 @@ namespace KXIParse
                 Expect(TokenType.Identifier);
                 if (Semanting)
                 {
-                    _semanter.iPush(lastToken.Value);
+                    _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
                     _semanter.iExist(GetScopeString(),lastToken.LineNumber);
                     _semanter.checkSpawn(GetScopeString(), lastToken.LineNumber);
                 }
@@ -1051,7 +1053,7 @@ namespace KXIParse
             {
                 Expect(TokenType.Identifier);
                 if (Semanting)
-                    _semanter.iPush(lastToken.Value);
+                    _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
                 Expect(TokenType.Semicolon);
                 if (Semanting)
                     _semanter.checkLock(lastToken.LineNumber);
@@ -1061,7 +1063,7 @@ namespace KXIParse
             {
                 Expect(TokenType.Identifier);
                 if (Semanting)
-                    _semanter.iPush(lastToken.Value);
+                    _semanter.iPush(GetScopeString(), lastToken.Value, lastToken.LineNumber);
                 Expect(TokenType.Semicolon);
                 if (Semanting)
                     _semanter.checkRelease(lastToken.LineNumber);

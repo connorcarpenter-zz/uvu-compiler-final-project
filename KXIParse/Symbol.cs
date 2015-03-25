@@ -17,6 +17,6 @@ namespace KXIParse
         public string AccessMod { get; set; }
         public bool IsArray { get; set; }
         public List<string> Params { get; set; }
-        public int Size { get; set; }
+        public int Size = 4;
     }
 }
