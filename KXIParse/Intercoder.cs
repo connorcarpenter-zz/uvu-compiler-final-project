@@ -37,7 +37,7 @@ namespace KXIParse
     }
     class Intercoder
     {
-        private const bool DEBUG = true;
+        private const bool DEBUG =false;
         public static List<Quad> IntercodeList;
         private static Stack<string> _tempVarNames;
         private static List<string> _labelNames;
@@ -59,13 +59,20 @@ namespace KXIParse
 
         public string GetLabelName(string description)
         {
+            var finalname = "";
             var name = description.ToUpper();
-            var numb = 0;
-            while (_labelNames.Contains(name + numb))
-                numb += 1;
-            _labelNames.Insert(labelNameIndex+1,name + numb);
+            if (!_labelNames.Contains(name)) finalname = name;
+            else
+            {
+                var numb = 0;
+                while (_labelNames.Contains(name + numb))
+                    numb += 1;
+                finalname = name + numb;
+            }
+            
+            _labelNames.Insert(labelNameIndex+1,finalname);
             labelNameIndex += 1;
-            return name + numb;
+            return finalname;
         }
 
         public string GetLabelBottom()
@@ -291,9 +298,10 @@ namespace KXIParse
 
         public void End()
         {
-            var lastOrDefault = IntercodeList.LastOrDefault();
-            if (lastOrDefault != null && lastOrDefault.Operand3 != null && lastOrDefault.Operand3.Equals("OPENLABELSLOT"))
-                IntercodeList.Remove(lastOrDefault);
+            //WriteReturn("void",null);
+            //var lastOrDefault = IntercodeList.LastOrDefault();
+           // if (lastOrDefault != null && lastOrDefault.Operand3 != null && lastOrDefault.Operand3.Equals("OPENLABELSLOT"))
+           //     IntercodeList.Remove(lastOrDefault);
         }
 
         public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4)
@@ -332,7 +340,7 @@ namespace KXIParse
         {
             var newTemp = GetTempVarName();
             WriteQuad("", "NEWI", ""+r1.LinkedSymbol.Data.Size, newTemp,"", "newobj");
-            WriteQuad("", "FRAME", r2.LinkedSymbol.SymId, newTemp, "", "newobj");
+            WriteQuad("", "FRAME", r1.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
             {
                 foreach (var a in r1.ArgumentList)
@@ -340,6 +348,11 @@ namespace KXIParse
             }
             WriteQuad("", "CALL", r1.LinkedSymbol.SymId, "", "", "newobj");
             WriteQuad("", "PEEK", r1.TempVariable.ToString(), "", "", "function");
+        }
+
+        public void AddMethodLabel(string symId)
+        {
+            WriteQuad(GetLabelName(symId), "", "", "", "OPENLABELSLOT", "method");
         }
     }
 }

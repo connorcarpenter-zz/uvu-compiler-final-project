@@ -642,7 +642,19 @@ namespace KXIParse
 
         public void End()
         {
-            _intercoder.End();
+            //_intercoder.End();
+        }
+
+        public string FindSymId(string kind, string scope, string value)
+        {
+            foreach (var sym in _symbolTable.Where(sym => sym.Value.Kind == kind && sym.Value.Scope == scope && sym.Value.Value == value))
+                return sym.Value.SymId;
+            throw new Exception(string.Format("Semantic Error: Can't find symbol of kind: {0}, and value: {1} in symbol table",kind,value));
+        }
+
+        public void AddMethodLabel(string symId)
+        {
+            _intercoder.AddMethodLabel(symId);
         }
     }
 

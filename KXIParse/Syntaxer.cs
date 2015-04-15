@@ -151,6 +151,12 @@ namespace KXIParse
             Expect(TokenType.ParenBegin);
             Expect(TokenType.ParenEnd);
 
+            if (Semanting)
+            {
+                //add label
+                _semanter.AddMethodLabel("main");
+            }
+
             //go into main scope
             _scope.Add("main");
 
@@ -159,8 +165,25 @@ namespace KXIParse
             //go out of scope
             outScope("main");
 
-            if(Semanting)
-                _semanter.End();
+            //add ending return statement if it wasn't there
+            //if(Semanting)_semanter.End();
+            AddImpliedReturnStatement();
+        }
+
+        private void AddImpliedReturnStatement()
+        {
+            if (_recordTokens == null || _insertTokens == null) return;
+
+            if (_recording)
+            {
+                _recordTokens.Insert(_recordTokens.Count - 1,new Token(TokenType.Return,"return",lastToken.LineNumber));
+                _recordTokens.Insert(_recordTokens.Count - 1, new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
+            }
+            else
+            {
+                _insertTokens.Insert(_insertTokens.Count - 1, new Token(TokenType.Return, "return", lastToken.LineNumber));
+                _insertTokens.Insert(_insertTokens.Count - 1, new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
+            }
         }
 
         private void ClassDeclaration()
@@ -220,6 +243,8 @@ namespace KXIParse
                     _recordTokens.Add(new Token(TokenType.BlockBegin, "{", lastToken.LineNumber));
                     foreach(var r in _insertTokens)
                         _recordTokens.Add(r);
+                    _recordTokens.Add(new Token(TokenType.Return, "return", lastToken.LineNumber));
+                    _recordTokens.Add(new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
                     _recordTokens.Add(new Token(TokenType.BlockEnd, "}", lastToken.LineNumber));
 
                     _insertTokens.Clear();
@@ -386,6 +411,13 @@ namespace KXIParse
                         });
                 }
 
+                if (Semanting)
+                {
+                    //add label
+                    var symId = _semanter.FindSymId("method", GetScopeString(), name);
+                    _semanter.AddMethodLabel(symId);
+                }
+
                 //go into method's scope
                 _scope.Add(name);
 
@@ -436,6 +468,13 @@ namespace KXIParse
                     });
             }
 
+            if (Semanting)
+            {
+                //add label
+                var symId = _semanter.FindSymId("Constructor", GetScopeString(), name);
+                _semanter.AddMethodLabel(symId);
+            }
+
             //go into method's scope
             _scope.Add(name);
 
@@ -443,6 +482,9 @@ namespace KXIParse
 
             //leave
             outScope(name);
+
+            //add ending return statement
+            AddImpliedReturnStatement();
         }
 
         private bool AssignmentExpression()

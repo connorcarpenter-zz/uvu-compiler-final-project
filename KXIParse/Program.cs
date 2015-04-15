@@ -31,10 +31,14 @@ namespace KXIParse
                 }
 
                 var icodeList = syntaxer.SemanticPass(symbolTable);
-                Console.WriteLine("Semantics pass is done. Press enter to print final back-patched icode.");
-                Console.ReadLine();
-                foreach(var q in icodeList)
+                //Console.WriteLine("Semantics pass is done. Press enter to print final back-patched icode.");
+                //Console.ReadLine();
+                foreach (var q in icodeList)
+                {
+                    if(q.Label.Length!=0)
+                        Console.WriteLine();
                     Console.WriteLine(q.ToString());
+                }
                 Console.ReadLine();
             }
             catch(Exception e)
