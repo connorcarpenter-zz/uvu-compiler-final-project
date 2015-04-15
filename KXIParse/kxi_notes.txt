@@ -191,3 +191,4 @@ void kxi2015 main() // This is the main function
 	cout << myDog.name(15);
 	cout << myHorse.name(23+42/4+1-251*13);
 }
+

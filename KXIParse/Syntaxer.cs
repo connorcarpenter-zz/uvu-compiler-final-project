@@ -13,7 +13,7 @@ namespace KXIParse
         private List<Token> _tokens;
         private static List<Token> _tokensClone;
         private static List<string> _scope;
-        private static Dictionary<string,Symbol> _syntaxSymbolTable;
+        public static Dictionary<string,Symbol> _syntaxSymbolTable;
         private bool Syntaxing { get; set; }
         private bool Semanting { get; set; }
         private bool ConstructorCreated { get; set; }
@@ -50,7 +50,12 @@ namespace KXIParse
             var icodeList = new List<Quad>();
             _semanter = new Semanter(this,symbolTable,icodeList);
             InitTokens();
+            _syntaxSymbolTable = new Dictionary<string, Symbol>(symbolTable);
             StartSymbol();
+
+            //add Jump to Main call
+            icodeList.Insert(0,new Quad("","JMP","MAIN","",""));
+
             return icodeList;
         }
 

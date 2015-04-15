@@ -58,6 +58,7 @@
     <None Include="program.kxi" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="kxi_notes2.txt" />
     <Content Include="kxi_notes.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

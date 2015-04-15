@@ -1,28 +1,4 @@
-class Cat
-{
-	unprotected int paws = 3 * 3;
-	unprotected Cat Kitten()
-	{
-		Cat k = new Cat(paws);
-		return k;
-	}
-	Cat(int j)
-	{
-		paws = paws + j;
-	}
-}
-
 void kxi2015 main() // This is the main function
 {
-	int size = 10;
-	int i = 1;
-	Cat c[] = new Cat[size];
-	c[1] = new Cat(i);
-	
-	while(i<size)
-	{
-		c[i]=c[i-1].Kitten();
-		cout << c[i].paws;
-		i=i+1;
-	}
+	int i = 1 + 2;
 }
