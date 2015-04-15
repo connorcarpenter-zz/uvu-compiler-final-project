@@ -37,7 +37,7 @@ namespace KXIParse
     }
     class Intercoder
     {
-        private const bool DEBUG =false;
+        private const bool DEBUG = false;
         public static List<Quad> IntercodeList;
         private static Stack<string> _tempVarNames;
         private static List<string> _labelNames;

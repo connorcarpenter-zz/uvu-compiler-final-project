@@ -33,13 +33,27 @@ namespace KXIParse
                 var icodeList = syntaxer.SemanticPass(symbolTable);
                 //Console.WriteLine("Semantics pass is done. Press enter to print final back-patched icode.");
                 //Console.ReadLine();
+                /*
                 foreach (var q in icodeList)
                 {
                     if(q.Label.Length!=0)
                         Console.WriteLine();
                     Console.WriteLine(q.ToString());
                 }
+                 * */
+                Console.WriteLine("Finished with ICode generation");
                 Console.ReadLine();
+
+                var tarcoder = new Tarcoder(symbolTable, icodeList);
+                var tcodeList = tarcoder.Generate();
+                foreach (var t in tcodeList)
+                {
+                    Console.WriteLine(t.ToString());
+                }
+                Console.WriteLine("Finished with TCode generation");
+                Console.ReadLine();
+                var tcodestring = Tarcoder.TCodeString(tcodeList);
+                VMShell.Execute(tcodestring);
             }
             catch(Exception e)
             {
