@@ -68,9 +68,13 @@ namespace KXIParse
         public Tarcoder(Dictionary<string,Symbol> _symbolTable, List<Quad> _icodeList)
         {
             symbolTable = _symbolTable;
+
+            //make main method
+            symbolTable.Add("Main", new Symbol { Kind = "Method", Scope = "g", SymId = "Main", Value = "main", Vars = 0 });
             PostProcessSymTable(symbolTable, "param");
             PostProcessSymTable(symbolTable, "lvar");
             PostProcessSymTable(symbolTable, "ivar");
+
             icodeList = _icodeList;
             tcodeList = new List<Triad>();
             registers = new Dictionary<string, List<string>>();
