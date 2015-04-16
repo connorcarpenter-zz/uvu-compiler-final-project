@@ -74,6 +74,7 @@ namespace KXIParse
             PostProcessSymTable(symbolTable, "param");
             PostProcessSymTable(symbolTable, "lvar");
             PostProcessSymTable(symbolTable, "ivar");
+            PostProcessSymTable(symbolTable, "temp");
 
             icodeList = _icodeList;
             tcodeList = new List<Triad>();
@@ -107,6 +108,7 @@ namespace KXIParse
                         break;
                     case "param":
                     case "lvar":
+                    case "temp":
                     {
                         //we're looking for a method
                         foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.Equals("Method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))

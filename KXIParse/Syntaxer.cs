@@ -48,7 +48,7 @@ namespace KXIParse
             _recordTokens = null;
             _insertTokens = null;
             var icodeList = new List<Quad>();
-            _semanter = new Semanter(this,symbolTable,icodeList);
+            _semanter = new Semanter(symbolTable,icodeList);
             InitTokens();
             _syntaxSymbolTable = new Dictionary<string, Symbol>(symbolTable);
             StartSymbol();

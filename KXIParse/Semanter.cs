@@ -66,7 +66,7 @@ namespace KXIParse
             }
         }
 
-        public Semanter(Syntaxer s,Dictionary<string, Symbol> st,List<Quad> iCodeList)
+        public Semanter(Dictionary<string, Symbol> st,List<Quad> iCodeList)
         {
             _operatorStack = new Stack<Operator>();
             _recordStack = new Stack<Record>();
@@ -118,7 +118,7 @@ namespace KXIParse
             var newSar = new Record(typeSar)
             {
                 Type = RecordType.NewArray,
-                TempVariable = _intercoder.GetTempVarName()
+                TempVariable = _intercoder.GetTempVarName(typeSar)
             };
             newSar.LinkedSymbol = GetSizeRecord(newSar);
             _recordStack.Push(newSar);
@@ -446,7 +446,7 @@ namespace KXIParse
                 {
                     Type = RecordType.Reference,
                     LinkedSymbol = symbol,
-                    TempVariable = _intercoder.GetTempVarName()
+                    TempVariable = _intercoder.GetTempVarName(childId)
                 };
                 _recordStack.Push(newRecord);
 
@@ -498,7 +498,7 @@ namespace KXIParse
                 ArgumentList = new Stack<Record>(),
                 LinkedSymbol = sym,
                 Type = RecordType.New,
-                TempVariable = _intercoder.GetTempVarName()
+                TempVariable = _intercoder.GetTempVarName(typeSar)
             };
             foreach (var a in sym.Data.Params)
             {
@@ -592,7 +592,7 @@ namespace KXIParse
                         type = "int";
                     result = new Record(
                             RecordType.Temporary,
-                            _intercoder.GetTempVarName(),
+                            _intercoder.GetTempVarName(i2),
                             new Symbol { Data = new Data { Type = type } });
                     result.TempVariable = i1.Value + "." + i2.Value;
                      _recordStack.Push(result);

@@ -42,6 +42,10 @@ namespace KXIParse
         private static Stack<string> _tempVarNames;
         private static List<string> _labelNames;
         private static int labelNameIndex = -1;
+        private static Dictionary<string, Symbol> symbolTable
+        {
+            get { return Syntaxer._syntaxSymbolTable; }
+        }
 
         public Intercoder(List<Quad> intercodeList)
         {
@@ -50,10 +54,15 @@ namespace KXIParse
             _labelNames = new List<string>();
         }
 
-        public string GetTempVarName()
+        public string GetTempVarName(Record r)
         {
-            var name = "t" + _tempVarNames.Count ;
+            if(r==null || r.LinkedSymbol.Scope==null || r.LinkedSymbol.Scope.Length==0)
+                throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
+            var name = "_tmp" + _tempVarNames.Count ;
             _tempVarNames.Push(name);
+
+            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Kind="temp",SymId=name,Value=name});
+
             return name;
         }
 
@@ -317,7 +326,7 @@ namespace KXIParse
 
         public void WriteFunctionPeek(Record r)
         {
-            var tempVar = GetTempVarName();
+            var tempVar = GetTempVarName(r);
             WriteQuad("", "PEEK", tempVar, "", "", "function");
             _tempVarNames.Pop();
         }
@@ -329,8 +338,8 @@ namespace KXIParse
 
         public void WriteNewArray(Record r1, Record r2, Record r3)
         {
-            var firstTemp = GetTempVarName();
-            var secondTemp = GetTempVarName();
+            var firstTemp = GetTempVarName(r1);
+            var secondTemp = GetTempVarName(r1);
             WriteQuad("","MOVI",""+r3.LinkedSymbol.Data.Size,firstTemp,"","array");
             WriteQuad("", "MUL", firstTemp, ToOperand(r1), secondTemp, "array");
             WriteQuad("","NEW",secondTemp,ToOperand(r3),"","array");
@@ -338,7 +347,7 @@ namespace KXIParse
 
         public void WriteNewObj(Record r1,Record r2)
         {
-            var newTemp = GetTempVarName();
+            var newTemp = GetTempVarName(r1);
             WriteQuad("", "NEWI", ""+r1.LinkedSymbol.Data.Size, newTemp,"", "newobj");
             WriteQuad("", "FRAME", r1.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
