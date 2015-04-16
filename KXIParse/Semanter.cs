@@ -649,6 +649,7 @@ namespace KXIParse
         {
             foreach (var sym in _symbolTable.Where(sym => sym.Value.Kind == kind && sym.Value.Scope == scope && sym.Value.Value == value))
                 return sym.Value.SymId;
+
             throw new Exception(string.Format("Semantic Error: Can't find symbol of kind: {0}, and value: {1} in symbol table",kind,value));
         }
 

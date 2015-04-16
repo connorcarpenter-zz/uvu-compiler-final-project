@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
+using System.Data.OleDb;
 using System.Linq;
 
 namespace KXIParse
@@ -54,7 +54,9 @@ namespace KXIParse
             StartSymbol();
 
             //add Jump to Main call
-            icodeList.Insert(0,new Quad("","JMP","MAIN","",""));
+            icodeList.Insert(0, new Quad("", "FRAME", "MAIN", "null", ""));
+            icodeList.Insert(1, new Quad("", "CALL", "MAIN", "", ""));
+            icodeList.Insert(2, new Quad("", "RTN", "", "", ""));
 
             return icodeList;
         }
@@ -83,8 +85,9 @@ namespace KXIParse
 
         private string GenerateSymId(string kind)
         {
-            var firstChar = "" + kind.ToUpper()[0];
-            var i = 100;
+            //var firstChar = "" + kind.ToUpper()[0];
+            var firstChar = "_"+kind.ToLower().Replace(" ", "_").Substring(0,3);
+            var i = 0;
             while (_syntaxSymbolTable.ContainsKey(firstChar + i))
                 i++;
             return firstChar + i;
@@ -208,7 +211,8 @@ namespace KXIParse
                         Kind = "Class",
                         Scope = GetScopeString(),
                         SymId = symId,
-                        Value = className
+                        Value = className,
+                        Vars = 0
                     });
             }
 
@@ -362,6 +366,7 @@ namespace KXIParse
                 if (Syntaxing)
                 {
                     var symId = GenerateSymId("Variable");
+                    var scope = GetScopeString();
                     _syntaxSymbolTable.Add(symId,
                         new Symbol()
                         {
@@ -372,7 +377,7 @@ namespace KXIParse
                                 IsArray = isArray,
                             },
                             Kind = "ivar",
-                            Scope = GetScopeString(),
+                            Scope = scope,
                             SymId = symId,
                             Value = name
                         });
@@ -407,6 +412,7 @@ namespace KXIParse
                             Scope = GetScopeString(),
                             SymId = symId,
                             Value = name,
+                            Vars = 0,
                             Data = new Data()
                             {
                                 Type = type,
@@ -469,7 +475,8 @@ namespace KXIParse
                         Kind = "Constructor",
                         Scope = GetScopeString(),
                         SymId = symId,
-                        Value = name
+                        Value = name,
+                        Vars = 0
                     });
             }
 
@@ -583,6 +590,8 @@ namespace KXIParse
             if (Syntaxing)
             {
                 var symId = GenerateSymId("Parameter");
+                var scope = GetScopeString();
+
                 _syntaxSymbolTable.Add(symId,
                     new Symbol()
                     {
@@ -593,7 +602,7 @@ namespace KXIParse
                             IsArray = isArray,
                         },
                         Kind = "param",
-                        Scope = GetScopeString(),
+                        Scope = scope,
                         SymId = symId,
                         Value = name
                     });
@@ -680,7 +689,7 @@ namespace KXIParse
                 }
                 else if (Accept(TokenType.Character))
                 {
-                    if (Semanting)
+                    if (Syntaxing)
                     {
                         var symId = GenerateSymId("Literal");
                         var symbol = new Symbol()
@@ -696,9 +705,12 @@ namespace KXIParse
                             SymId = symId,
                             Value = lastToken.Value
                         };
-                        _syntaxSymbolTable.Add(symId,symbol);
-
-                        _semanter.lPush(lastToken.Type,symbol);
+                        _syntaxSymbolTable.Add(symId, symbol);
+                    }
+                    if (Semanting)
+                    {
+                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value);
+                        _semanter.lPush(lastToken.Type,_syntaxSymbolTable[symId]);
                     }
                         
                 }
@@ -718,7 +730,7 @@ namespace KXIParse
                          Accept(TokenType.Null) ||
                          Accept(TokenType.Number))
                 {
-                    if (Semanting)
+                    if (Syntaxing)
                     {
                         var symId = GenerateSymId("Literal");
                         var symbol = new Symbol()
@@ -735,8 +747,11 @@ namespace KXIParse
                             Value = lastToken.Value
                         };
                         _syntaxSymbolTable.Add(symId, symbol);
-
-                        _semanter.lPush(lastToken.Type,symbol);
+                    }
+                    if (Semanting)
+                    {
+                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value);
+                        _semanter.lPush(lastToken.Type, _syntaxSymbolTable[symId]);
                     }
                 }
                 var backupList = new List<Token>(_tokensClone);
@@ -889,6 +904,10 @@ namespace KXIParse
                         _recordTokens.Add(r);
                     _insertTokens.Clear();
                     ConstructorCreated = true;
+
+                    //update literals in symtable
+                    foreach (var s in _syntaxSymbolTable.Where(s => s.Value.Kind.Equals("literal") && s.Value.Scope.Equals(_scope[0] + "." + _scope[1])))
+                        s.Value.Scope += "." + _scope[1];
                 }
             }
 
@@ -940,6 +959,7 @@ namespace KXIParse
             if (Syntaxing)
             {
                 var symId = GenerateSymId("Local Variable");
+                var scope = GetScopeString();
                 _syntaxSymbolTable.Add(symId,
                     new Symbol()
                     {
@@ -950,7 +970,7 @@ namespace KXIParse
                             IsArray = isArray,
                         },
                         Kind = "lvar",
-                        Scope = GetScopeString(),
+                        Scope = scope,
                         SymId = symId,
                         Value = name
                     });

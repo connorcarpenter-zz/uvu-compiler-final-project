@@ -41,18 +41,84 @@ namespace KXIParse
             return output;
         }
     }
+
+    public enum LocType { Register, Stack, Heap, Memory }
+    class MemLoc
+    {
+        public LocType Type { get; set; }
+        public int Offset { get; set; }
+        public string Register { get; set; }
+        public string Label { get; set; }
+    }
     class Tarcoder
     {
         private Dictionary<string, Symbol> symbolTable;
         private List<Quad> icodeList;
-        private List<Triad> tcodeList; 
+        private List<Triad> tcodeList;
+
+        //key is R0, R1, R2...
+        //value is the list of symids currently associated with that register
+        private Dictionary<string, List<string>> registers;
+
+        //key is a symid
+        //value is a list of locations that the symid can be found at
+        private Dictionary<string, List<MemLoc>> locations;
         private const bool DEBUG =false;
         
         public Tarcoder(Dictionary<string,Symbol> _symbolTable, List<Quad> _icodeList)
         {
             symbolTable = _symbolTable;
+            PostProcessSymTable(symbolTable, "param");
+            PostProcessSymTable(symbolTable, "lvar");
+            PostProcessSymTable(symbolTable, "ivar");
             icodeList = _icodeList;
             tcodeList = new List<Triad>();
+            registers = new Dictionary<string, List<string>>();
+            for(var i=0;i<7;i++)
+                registers.Add("R"+i,new List<string>());
+        }
+
+        private static void PostProcessSymTable(Dictionary<string, Symbol> symTable, string kind)
+        {
+            foreach (var sym1 in symTable)
+            {
+                if (!sym1.Value.Kind.Equals(kind)) continue;
+
+                var scope = sym1.Value.Scope.Split('.');
+                var found = false;
+                switch (sym1.Value.Kind)
+                {
+                    case "ivar":
+                    {
+                        //we're looking for a class
+                        foreach (var sym2 in symTable.Where(sym2 => sym2.Value.Kind.Equals("Class") && sym2.Value.Value.Equals(scope[1])))
+                        {
+                            sym2.Value.Vars++;
+                            sym1.Value.Offset = sym2.Value.Vars;
+                            found = true;
+                            break;
+                        }
+                        
+                    }
+                        break;
+                    case "param":
+                    case "lvar":
+                    {
+                        //we're looking for a method
+                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.Equals("Method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))
+                        {
+                            sym2.Value.Vars++;
+                            sym1.Value.Offset = sym2.Value.Vars;
+                            found = true;
+                            break;
+                        }
+                    }
+                        break;
+                }
+
+                if(!found)
+                    throw new Exception("Syntax error: can't find class/method to associate with new variable/parameter");
+            }
         }
 
         public List<Triad> Generate()
@@ -63,12 +129,43 @@ namespace KXIParse
 
         private void Start()
         {
-            AddTriad("","","","","","Start");
-            AddTriad("", "CMP", "R0", "R0", "", "");
-            AddTriad("", "ADI", "R0", "1", "", "");
-            AddTriad("", "TRP", "1", "", "", "");
-            AddTriad("", "TRP", "0", "", "", "");
-            AddTriad("", "", "", "", "", "End");
+            foreach (var q in icodeList)
+            {
+                switch (q.Operation)
+                {
+                    case "ADD":
+                    case "SUB":
+                    case "MUL":
+                    case "DIV":
+                        ConvertMathInstruction();
+                        break;
+                }
+            }
+        }
+
+        private void ConvertMathInstruction(Quad q = null)
+        {
+            
+        }
+
+        private void addToRegister(string register, string symid)
+        {
+            registers[register].Add(symid);   
+        }
+        private string getRegister()
+        {
+            foreach (var r in registers)
+            {
+                if (r.Value.Count == 0)
+                    return r.Key;
+            }
+            //need to figure out how to free up registers
+            throw new Exception("TCode Error! You're out of free registers");
+        }
+
+        private string getLocation(string symid)
+        {
+            return "someLocation";
         }
 
         private void AddTriad(string label, string op1, string op2, string op3, string action, string comment)
