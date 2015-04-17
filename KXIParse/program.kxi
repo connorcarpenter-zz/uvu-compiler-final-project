@@ -1,15 +1,5 @@
-class Cat
-{
-	unprotected int paws = 5;
-	unprotected char name = 'a';
-
-	Cat(int x)
-	{
-		paws = paws + x;
-	}
-}
-
 void kxi2015 main() // This is the main function
 {
 	int i = 1 + 2;
+	cout << i;
 }

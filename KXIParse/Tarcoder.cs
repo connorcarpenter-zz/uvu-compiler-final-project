@@ -79,6 +79,7 @@ namespace KXIParse
             registers = new Dictionary<string, List<string>>();
             for(var i=0;i<7;i++)
                 registers.Add("R"+i,new List<string>());
+            locations = new Dictionary<string, List<MemLoc>>();
         }
 
         private static void PostProcessSymTable(Dictionary<string, Symbol> symTable, string kind)
@@ -146,7 +147,6 @@ namespace KXIParse
         }
         private void GenerateEndCode()
         {
-            AddTriad("END_PROGRAM","TRP","0","","","");
             AddTriad("", "", "", "", "", "; Set up global variables and heap/stack information");
             AddTriad("OVERFLOW", "TRP", "0", "", "","; Jump to this when there's overflow");
             AddTriad("UNDERFLOW", "TRP", "0", "", "", "; Jump to this when there's underflow");
@@ -158,37 +158,101 @@ namespace KXIParse
                 if (sym.Value.Data.Type.Equals("Character"))
                     AddTriad(sym.Key, ".BYT", sym.Value.Value, "", "", "");
             }
-
             
             AddTriad("FREE_HEAP_POINTER", ".INT", "0", "", "", "");
             AddTriad("STACK_SIZE", ".INT", Convert.ToString(stackSize), "", "", "");
             AddTriad("HEAP_SIZE", ".INT", Convert.ToString(heapSize), "", "", "");
             AddTriad("HEAP_START", "NOOP", "", "", "", "");
         }
-        private void addToRegister(string register, string symid)
-        {
-            registers[register].Add(symid);
-        }
-        private string getRegister()
+
+        private string getEmptyRegister()
         {
             foreach (var r in registers)
             {
                 if (r.Value.Count == 0)
+                {
+                    r.Value.Add("%temp%");
                     return r.Key;
+                }
             }
+
             //need to figure out how to free up registers
             throw new Exception("TCode Error! You're out of free registers");
         }
+        private string getRegister(string symId = "")
+        {
+            if (symId == "")
+                throw new Exception("TCODE: Trying to get data for empty symbol id");
 
+            //check if this symid has data in a register already
+            checkLocationInit(symId);
+            foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
+                return l.Register;
+
+            //find out where to get the symbol
+            var symbol = symbolTable[symId];
+            switch(symbol.Kind)
+            {
+                case "literal":
+                {
+                    var register = getEmptyRegister();
+                    AddTriad("", "LDR", register, symId, "", "");
+                    registers[register].Add(symId);
+                    locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
+                    CleanTempRegisters();
+                    return register;
+                }
+                case "temp":
+                case "lvar":
+                {
+                    var register1 = getEmptyRegister();
+                    var register2 = getEmptyRegister();
+                    AddTriad("", "MOV", register1, "FP", "", "");
+                    var offset = "" + (symbol.Offset*-4);
+                    AddTriad("", "ADI", register1, offset, "", "");
+                    AddTriad("", "LDR", register2, register1, "", "");
+                    registers[register2].Add(symId);
+                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
+                    CleanTempRegisters();
+                    return register2;
+                }
+                default:
+                    throw new Exception("TCODE: Trying to get location of unknown symbol type");
+                    break;
+            }
+        }
+
+        private void CleanTempRegisters()
+        {
+            foreach (var register in registers)
+                register.Value.RemoveAll(s => s.Equals("%temp%"));
+        }
+
+        private void checkLocationInit(string symId)
+        {
+            if(!locations.ContainsKey(symId))
+                locations.Add(symId,new List<MemLoc>());
+        }
         private string getLocation(string symid)
         {
             return "someLocation";
         }
 
-        private void AddTriad(string label, string op1, string op2, string op3, string action, string comment)
+        private void AddTriad(string label, string operation, string operand1, string operand2, string action, string comment)
         {
-            var t = new Triad(label, op1, op2, op3, comment);
-            tcodeList.Add(t);
+            if (tcodeList.LastOrDefault() != null && tcodeList.LastOrDefault().Operation.Equals("REPLACENEXT"))
+            {
+                var t = tcodeList.LastOrDefault();
+                t.Operation = operation;
+                t.Operand1 = operand1;
+                t.Operand2 = operand2;
+                t.Comment = comment;
+            }
+            else
+            {
+                var t = new Triad(label, operation, operand1, operand2, comment);
+                tcodeList.Add(t);
+            }
         }
 
         private void Start()
@@ -197,6 +261,8 @@ namespace KXIParse
 
             foreach (var q in icodeList)
             {
+                if(q.Label.Length!=0)
+                    AddTriad(q.Label, "REPLACENEXT", "", "", "", "");
                 switch (q.Operation)
                 {
                     case "ADD":
@@ -211,18 +277,26 @@ namespace KXIParse
                     case "CALL":
                         ConvertCallInstruction(q);
                         break;
+                    case "END":
+                        AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
+                        break;
                 }
             }
         }
 
         private void ConvertMathInstruction(Quad q)
         {
-            
+            var rA = getRegister(q.Operand1);
+            var rB = getRegister(q.Operand2);
+            var rC = getRegister(q.Operand3);
+
+            AddTriad("", "MOV", rC, rA, "", "");
+            AddTriad("", q.Operation, rC, rB, "", "");
         }
 
         private void ConvertFrameInstruction(Quad q)
         {
-            var rA = getRegister();
+            var rA = getEmptyRegister();
             //first test for overflow
             AddTriad("","MOV",rA,"SP","","; Settup up activation record for "+q.Operand1+" method");
             var methodSize = 8+(symbolTable[q.Operand1].Vars*4);
@@ -237,11 +311,13 @@ namespace KXIParse
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust stack pointer for return address");
             AddTriad("", "STR", rA, "SP", "", "; PFP to Top of Stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
+
+            CleanTempRegisters();
         }
 
         private void ConvertCallInstruction(Quad q)
         {
-            var rA = getRegister();
+            var rA = getEmptyRegister();
 
             //first make room for local variables
             var methodSize = symbolTable[q.Operand1].Vars;
@@ -254,6 +330,8 @@ namespace KXIParse
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
             AddTriad("", "JMP", rA, q.Operand1, "", "");
+
+            CleanTempRegisters();
         }
 
         public static string TCodeString(List<Triad> triads)
