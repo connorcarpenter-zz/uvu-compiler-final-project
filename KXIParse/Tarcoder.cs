@@ -313,11 +313,19 @@ namespace KXIParse
                     case "CALL":
                         ConvertCallInstruction(q);
                         break;
+                    case "RTN":
+                        ConvertRtnInstruction(q);
+                        break;
                     case "END":
                         AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
                         break;
                 }
             }
+        }
+
+        private void ConvertRtnInstruction(Quad q)
+        {
+            throw new Exception("Need to implement the RTN method!!");
         }
 
         private void ConvertMoveInstruction(Quad q)
