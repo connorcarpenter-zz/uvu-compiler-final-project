@@ -56,7 +56,6 @@ namespace KXIParse
             //add Jump to Main call
             icodeList.Insert(0, new Quad("", "FRAME", "MAIN", "null", ""));
             icodeList.Insert(1, new Quad("", "CALL", "MAIN", "", ""));
-            icodeList.Insert(2, new Quad("", "RTN", "", "", ""));
 
             return icodeList;
         }

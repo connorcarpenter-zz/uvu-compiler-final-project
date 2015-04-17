@@ -41,8 +41,7 @@ namespace KXIParse
                         Console.WriteLine();
                     Console.WriteLine(q.ToString());
                 }
-                Console.WriteLine("Finished with ICode generation");
-                Console.ReadLine();
+                Console.WriteLine("Finished with ICode generation\n");
 
                 var tarcoder = new Tarcoder(symbolTable2, icodeList);
                 var tcodeList = tarcoder.Generate();
@@ -50,7 +49,7 @@ namespace KXIParse
                 {
                     Console.WriteLine(t.ToString());
                 }
-                Console.WriteLine("Finished with TCode generation");
+                Console.WriteLine("Finished with TCode generation\n");
                 Console.ReadLine();
                 var tcodestring = Tarcoder.TCodeString(tcodeList);
                 VMShell.Execute(tcodestring);
