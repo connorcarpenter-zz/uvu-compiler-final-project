@@ -31,7 +31,7 @@ namespace KXIParse
             }
             else
             {
-                output =string.Format("{3}: {0} {1} {2}", Operation, Operand1, Operand2, Label);
+                output =string.Format("{3} {0} {1} {2}", Operation, Operand1, Operand2, Label);
             }
             if (Comment != null && !Comment.Equals(""))
                 output += string.Format(" ; {0}", Comment);
@@ -196,7 +196,7 @@ namespace KXIParse
                 case "literal":
                 {
                     var register = getEmptyRegister();
-                    AddTriad("", "LDR", register, symId, "", "");
+                    AddTriad("", "LDR", register, symId, "", "; Symbol " + symId + " is now in " + register);
                     registers[register].Add(symId);
                     locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
                     CleanTempRegisters();
@@ -210,7 +210,7 @@ namespace KXIParse
                     AddTriad("", "MOV", register1, "FP", "", "");
                     var offset = "" + (symbol.Offset*-4);
                     AddTriad("", "ADI", register1, offset, "", "");
-                    AddTriad("", "LDR", register2, register1, "", "");
+                    AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
                     registers[register2].Add(symId);
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
                     CleanTempRegisters();
@@ -226,6 +226,36 @@ namespace KXIParse
         {
             foreach (var register in registers)
                 register.Value.RemoveAll(s => s.Equals("%temp%"));
+        }
+
+        private void DeallocRegister(string register)
+        {
+            foreach (var sym in registers[register])
+            {
+                if(!symbolTable.ContainsKey(sym))
+                    throw new Exception("TCODE: Trying to deallocate register associated with unknown symbol: "+sym);
+                var symbol = symbolTable[sym];
+                switch (symbol.Kind)
+                {
+                    case "lvar":
+                    case "temp":
+                    {
+                        var register2 = getEmptyRegister();
+                        AddTriad("", "MOV", register2, "FP", "", "");
+                        var offset = "" + (symbol.Offset * -4);
+                        AddTriad("", "ADI", register2, offset, "", "");
+                        AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
+                        CleanTempRegisters();
+                    }
+                        break;
+                    case "literal":
+                        break;
+                    default:
+                        throw new Exception("TCODE: Trying to deallocate a register into an unknown symbol type");
+                }
+            }
+
+            registers[register].Clear();
         }
 
         private void checkLocationInit(string symId)
@@ -271,6 +301,12 @@ namespace KXIParse
                     case "DIV":
                         ConvertMathInstruction(q);
                         break;
+                    case "MOV":
+                        ConvertMoveInstruction(q);
+                        break;
+                    case "WRITE":
+                        ConvertWriteInstruction(q);
+                        break;
                     case "FRAME":
                         ConvertFrameInstruction(q);
                         break;
@@ -281,6 +317,34 @@ namespace KXIParse
                         AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
                         break;
                 }
+            }
+        }
+
+        private void ConvertMoveInstruction(Quad q)
+        {
+            var rA = getRegister(q.Operand1);
+            var rB = getRegister(q.Operand2);
+
+            AddTriad("", "MOV", rB, rA, "", "");
+        }
+
+        private void ConvertWriteInstruction(Quad q)
+        {
+            var rA = getRegister(q.Operand2);
+            if (rA != "R0")
+            {
+                //put needed data into R0
+                DeallocRegister("R0");
+                AddTriad("", "MOV", "R0", rA, "", "");
+            }
+
+            if (q.Operand1.Equals("2"))
+            {
+                AddTriad("", "TRP", "3","", "", "");
+            }
+            else
+            {
+                AddTriad("", "TRP", "1", "", "", "");
             }
         }
 
@@ -329,7 +393,7 @@ namespace KXIParse
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
-            AddTriad("", "JMP", rA, q.Operand1, "", "");
+            AddTriad("", "JMP", q.Operand1, "", "", "");
 
             CleanTempRegisters();
         }
