@@ -57,6 +57,7 @@ namespace KXIParse
         //key is R0, R1, R2...
         //value is the list of symids currently associated with that register
         private Dictionary<string, List<string>> registers;
+        private List<string> lastUsedRegister; 
 
         //key is a symid
         //value is a list of locations that the symid can be found at
@@ -76,9 +77,13 @@ namespace KXIParse
 
             icodeList = _icodeList;
             tcodeList = new List<Triad>();
+            lastUsedRegister = new List<string>();
             registers = new Dictionary<string, List<string>>();
-            for(var i=0;i<7;i++)
-                registers.Add("R"+i,new List<string>());
+            for (var i = 0; i <= 7; i++)
+            {
+                registers.Add("R" + i, new List<string>());
+                if(i!=0)lastUsedRegister.Add("R"+i);
+            }
             locations = new Dictionary<string, List<MemLoc>>();
         }
 
@@ -165,11 +170,17 @@ namespace KXIParse
             AddTriad("HEAP_START", "NOOP", "", "", "", "");
         }
 
+        private void addSymToReg(string register,string symId)
+        {
+            registers[register].Add(symId);
+            lastUsedRegister.RemoveAll(s => s.Equals(register));
+            lastUsedRegister.Add(register);
+        }
         private string getEmptyRegister()
         {
             foreach (var r in registers)
             {
-                if (r.Value.Count == 0)
+                if (r.Value.Count == 0 && r.Key!="R0")
                 {
                     r.Value.Add("%temp%");
                     return r.Key;
@@ -196,8 +207,11 @@ namespace KXIParse
                 case "literal":
                 {
                     var register = getEmptyRegister();
-                    AddTriad("", "LDR", register, symId, "", "; Symbol " + symId + " is now in " + register);
-                    registers[register].Add(symId);
+                    var loadOp = "LDR";
+                    if (symbol.Data.Type == "Character")
+                        loadOp = "LDB";
+                    AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
+                    addSymToReg(register,symId);
                     locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
                     CleanTempRegisters();
                     return register;
@@ -211,7 +225,7 @@ namespace KXIParse
                     var offset = "" + (symbol.Offset*-4);
                     AddTriad("", "ADI", register1, offset, "", "");
                     AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
-                    registers[register2].Add(symId);
+                    addSymToReg(register2,symId);
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
                     CleanTempRegisters();
                     return register2;
@@ -228,8 +242,9 @@ namespace KXIParse
                 register.Value.RemoveAll(s => s.Equals("%temp%"));
         }
 
-        private void DeallocRegister(string register)
+        private bool DeallocRegister(string register)
         {
+            if (registers[register].Contains("%temp%")) return false;
             foreach (var sym in registers[register])
             {
                 if(!symbolTable.ContainsKey(sym))
@@ -256,6 +271,7 @@ namespace KXIParse
             }
 
             registers[register].Clear();
+            return true;
         }
 
         private void checkLocationInit(string symId)
@@ -326,25 +342,29 @@ namespace KXIParse
 
         private void ConvertRtnInstruction(Quad q)
         {
- /*
- ; Check for Underflow
-MOV SP FP
-MOV R0 SP
-CMP R0 SB
-BGT R0 UNDERFLOW
-
-; Set previous frame to current frame and return
-LDR R0 FP
-MOV R1 FP
-ADI R1 -4
-LDR FP R1
-STR SOMEREGISTER?! SP	; store return value
-JMR R0
-  
-  also: you need to make sure you don't deallocate registers with temp variables in them
-  */
             var rA = getEmptyRegister();
             var rB = getEmptyRegister();
+
+            AddTriad("", "MOV", "SP", "FP", "", "; Checking for underflow");
+            AddTriad("", "MOV", rA, "SP", "", "");
+            AddTriad("", "CMP", rA, "SB", "", "");
+            AddTriad("", "BGT", rA, "UNDERFLOW", "", "");
+
+            AddTriad("", "LDR", rA, "FP", "", "; set previous frame to current frame and return");
+            AddTriad("", "MOV", rB, "FP", "", "");
+            AddTriad("", "ADI", rB, "-4", "", "");
+            AddTriad("", "LDR", "FP", rB, "", "");
+
+            //check if there's a return value
+            if(q.Operation.Equals("RETURN"))
+            {
+                var retReg = getRegister(q.Operand1);
+                AddTriad("", "STR", retReg, "SP", "", "; store return value");
+            }
+
+            AddTriad("", "JMR", rA, "", "", "");
+
+            CleanTempRegisters();
         }
 
         private void ConvertMoveInstruction(Quad q)
@@ -361,7 +381,12 @@ JMR R0
             if (rA != "R0")
             {
                 //put needed data into R0
-                DeallocRegister("R0");
+                if (!DeallocRegister("R0"))
+                {
+                    //this block only triggers when DeallocRegister fails
+                    throw new Exception(
+                        "TCODE: Trying to deallocate temp variable in R0... If this happens consider making it so R0 can't hold temp variables?");
+                }
                 AddTriad("", "MOV", "R0", rA, "", "");
             }
 

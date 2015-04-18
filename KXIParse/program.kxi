@@ -1,5 +1,15 @@
 void kxi2015 main() // This is the main function
 {
-	int i = 1 + 2;
-	cout << i;
+	cout << 'h';
+	cout << 'e';
+	cout << 'l';
+	cout << 'l';
+	cout << 'o';
+	cout << ' ';
+	cout << 'w';
+	cout << 'o';
+	cout << 'r';
+	cout << 'l';
+	cout << 'd';
+	cout << '!';
 }
