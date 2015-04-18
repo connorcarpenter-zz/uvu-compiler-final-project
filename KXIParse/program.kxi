@@ -1,15 +1,17 @@
 void kxi2015 main() // This is the main function
 {
-	cout << 'h';
-	cout << 'e';
-	cout << 'l';
-	cout << 'l';
-	cout << 'o';
-	cout << ' ';
-	cout << 'w';
-	cout << 'o';
-	cout << 'r';
-	cout << 'l';
-	cout << 'd';
-	cout << '!';
+	int a = 16;
+	int b = 19;
+	if(a>b)
+	{
+		cout<<a;
+		cout<<'<';
+		cout<<b;
+	}
+	else
+	{
+		cout<<a;
+		cout<<'>';
+		cout<<b;
+	}
 }

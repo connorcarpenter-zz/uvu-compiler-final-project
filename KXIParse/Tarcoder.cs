@@ -53,6 +53,7 @@ namespace KXIParse
         private List<Triad> tcodeList;
         private const int stackSize = 400;
         private const int heapSize = 400;
+        private int compareLabels = 0;
 
         //key is R0, R1, R2...
         //value is the list of symids currently associated with that register
@@ -174,8 +175,11 @@ namespace KXIParse
 
             foreach (var q in icodeList)
             {
-                if (q.Label.Length != 0)
+                if (q.Label.Length != 0)//if there's a label on the next line
+                {
+                    DeallocAllRegisters();
                     AddTriad(q.Label, "REPLACENEXT", "", "", "", "");
+                }
                 switch (q.Operation)
                 {
                     case "ADD":
@@ -183,6 +187,14 @@ namespace KXIParse
                     case "MUL":
                     case "DIV":
                         ConvertMathInstruction(q);
+                        break;
+                    case "EQ":
+                    case "LT":
+                    case "GT":
+                    case "NE":
+                    case "LE":
+                    case "GE":
+                        ConvertBoolInstruction(q);
                         break;
                     case "MOV":
                         ConvertMoveInstruction(q);
@@ -194,14 +206,34 @@ namespace KXIParse
                         ConvertFrameInstruction(q);
                         break;
                     case "CALL":
+                        DeallocAllRegisters();
                         ConvertCallInstruction(q);
                         break;
                     case "RTN":
                     case "RETURN":
+                        DeallocAllRegisters();
                         ConvertRtnInstruction(q);
                         break;
                     case "END":
                         AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
+                        break;
+                    case "BF":
+                    {
+                        DeallocAllRegisters();
+                        var rA = GetRegister(q.Operand1);
+                        AddTriad("", "BRZ", rA, q.Operand2, "", "; if "+rA+" == FALSE, GOTO " + q.Operand1);
+                    }
+                        break;
+                    case "BT":
+                    {
+                        DeallocAllRegisters();
+                        var rA = GetRegister(q.Operand1);
+                        AddTriad("", "BNZ", rA, q.Operand2, "", "; if " + rA + " == TRUE, GOTO " + q.Operand1);
+                    }
+                        break;
+                    case "JMP":
+                        DeallocAllRegisters();
+                        AddTriad("","JMP",q.Operand1,"","","; GOTO "+q.Operand1);
                         break;
                 }
             }
@@ -216,6 +248,9 @@ namespace KXIParse
                 t.Operand1 = operand1;
                 t.Operand2 = operand2;
                 t.Comment = comment;
+
+                if(label.Length!=0)
+                    throw new Exception("TCODE: in AddTriad(), double label all the way!");
             }
             else
             {
@@ -223,11 +258,8 @@ namespace KXIParse
                 tcodeList.Add(t);
             }
         }
-        private string GetRegister(string symId = "")
+        private string GetRegister(string symId)
         {
-            if (symId == "")
-                throw new Exception("TCODE: Trying to get data for empty symbol id");
-
             //check if this symid has data in a register already
             CheckLocationInit(symId);
             foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
@@ -336,12 +368,63 @@ namespace KXIParse
             registers[register].Clear();
             return true;
         }
+        private void DeallocAllRegisters()
+        {
+            foreach (var r in registers)
+            {
+                if (!DeallocRegister(r.Key))
+                {
+                    throw new Exception("TCODE: in DeallocAllRegisters(), for some reason register "+r.Key+" can't deallocate");
+                }
+            }
+        }
         private void CheckLocationInit(string symId)
         {
             if(!locations.ContainsKey(symId))
                 locations.Add(symId,new List<MemLoc>());
         }
 
+        private string GetNewCompareLabel()
+        {
+            compareLabels++;
+            return "COMPARE" + compareLabels;
+        }
+
+        private void ConvertBoolInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand1);
+            var rB = GetRegister(q.Operand2);
+            var rC = GetRegister(q.Operand3);
+
+            AddTriad("", "MOV", rC, rA, "", "");
+            AddTriad("", "CMP", rC, rB, "", "");
+
+            var boolOp = "";
+            if (q.Operation.Equals("EQ")) boolOp = "BRZ";
+            if (q.Operation.Equals("NE")) boolOp = "BNZ";
+            if (q.Operation.Equals("LT") || q.Operation.Equals("LE")) boolOp = "BLT";
+            if (q.Operation.Equals("GT") || q.Operation.Equals("GE")) boolOp = "BGT";
+            if(boolOp.Length==0)throw new Exception("TCODE: in ConvertBoolInstruction(), noop!");
+            var compareLabel1 = GetNewCompareLabel();
+
+            AddTriad("", boolOp, rC, compareLabel1, "", string.Format("; if {0} {1} {2} GOTO {3}",q.Operand1,q.Operation,q.Operand2,compareLabel1));
+
+            if (q.Operation.Equals("LE") || q.Operation.Equals("GE"))
+            {
+                AddTriad("", "MOV", rC, rA, "", string.Format("; Test {0} == {1}", q.Operand1, q.Operand2));
+                AddTriad("", "CMP", rC, rB, "", "");
+                AddTriad("", "BRZ", rC, compareLabel1, "", string.Format("; if {0} == {1} GOTO {2}", q.Operand1, q.Operand2, compareLabel1));
+            }
+
+            AddTriad("", "CMP", rC, rC, "", "; Set "+rC+" to FALSE");
+
+            var compareLabel2 = GetNewCompareLabel();
+
+            AddTriad("", "JMP", compareLabel2, "", "", "");
+            AddTriad(compareLabel1, "CMP", rC, rC, "", "");
+            AddTriad("", "ADI", rC, "1", "", "; Set " + rC + " to TRUE");
+            AddTriad(compareLabel2, "REPLACENEXT", "", "", "", "");
+        }
         private void ConvertRtnInstruction(Quad q)
         {
             var rA = GetEmptyRegister();

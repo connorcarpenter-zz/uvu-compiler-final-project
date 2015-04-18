@@ -50,7 +50,6 @@ namespace KXIParse
                     Console.WriteLine(t.ToString());
                 }
                 Console.WriteLine("Finished with TCode generation\n");
-                Console.ReadLine();
                 var tcodestring = Tarcoder.TCodeString(tcodeList);
                 VMShell.Execute(tcodestring);
             }
