@@ -86,7 +86,6 @@ namespace KXIParse
             }
             locations = new Dictionary<string, List<MemLoc>>();
         }
-
         private static void PostProcessSymTable(Dictionary<string, Symbol> symTable, string kind)
         {
             foreach (var sym1 in symTable)
@@ -169,7 +168,6 @@ namespace KXIParse
             AddTriad("HEAP_SIZE", ".INT", Convert.ToString(heapSize), "", "", "");
             AddTriad("HEAP_START", "NOOP", "", "", "", "");
         }
-
         private void addSymToReg(string register,string symId)
         {
             registers[register].Add(symId);
@@ -182,13 +180,13 @@ namespace KXIParse
             {
                 if (r.Value.Count == 0 && r.Key!="R0")
                 {
-                    r.Value.Add("%temp%");
+                    addSymToReg(r.Key,"%temp%");
                     return r.Key;
                 }
             }
 
             //need to figure out how to free up registers
-            throw new Exception("TCode Error! You're out of free registers");
+            return getDeallocRegister();
         }
         private string getRegister(string symId = "")
         {
@@ -235,13 +233,22 @@ namespace KXIParse
                     break;
             }
         }
-
         private void CleanTempRegisters()
         {
             foreach (var register in registers)
                 register.Value.RemoveAll(s => s.Equals("%temp%"));
         }
+        private string getDeallocRegister()
+        {
+            var register = lastUsedRegister.First();
+            if (DeallocRegister(register))
+            {
+                addSymToReg(register,"%temp%");
+                return register;
+            }
 
+            throw new Exception("TCODE: Error trying to dealloc register in getDeallocRegister()");
+        }
         private bool DeallocRegister(string register)
         {
             if (registers[register].Contains("%temp%")) return false;
@@ -268,22 +275,17 @@ namespace KXIParse
                     default:
                         throw new Exception("TCODE: Trying to deallocate a register into an unknown symbol type");
                 }
+                locations[sym].RemoveAll(s => s.Register.Equals(register));
             }
 
             registers[register].Clear();
             return true;
         }
-
         private void checkLocationInit(string symId)
         {
             if(!locations.ContainsKey(symId))
                 locations.Add(symId,new List<MemLoc>());
         }
-        private string getLocation(string symid)
-        {
-            return "someLocation";
-        }
-
         private void AddTriad(string label, string operation, string operand1, string operand2, string action, string comment)
         {
             if (tcodeList.LastOrDefault() != null && tcodeList.LastOrDefault().Operation.Equals("REPLACENEXT"))
@@ -300,7 +302,6 @@ namespace KXIParse
                 tcodeList.Add(t);
             }
         }
-
         private void Start()
         {
             AddTriad("", "", "", "", "", "; Main Program");
@@ -339,7 +340,6 @@ namespace KXIParse
                 }
             }
         }
-
         private void ConvertRtnInstruction(Quad q)
         {
             var rA = getEmptyRegister();
@@ -366,7 +366,6 @@ namespace KXIParse
 
             CleanTempRegisters();
         }
-
         private void ConvertMoveInstruction(Quad q)
         {
             var rA = getRegister(q.Operand1);
@@ -374,7 +373,6 @@ namespace KXIParse
 
             AddTriad("", "MOV", rB, rA, "", "");
         }
-
         private void ConvertWriteInstruction(Quad q)
         {
             var rA = getRegister(q.Operand2);
@@ -399,7 +397,6 @@ namespace KXIParse
                 AddTriad("", "TRP", "1", "", "", "");
             }
         }
-
         private void ConvertMathInstruction(Quad q)
         {
             var rA = getRegister(q.Operand1);
@@ -409,7 +406,6 @@ namespace KXIParse
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", q.Operation, rC, rB, "", "");
         }
-
         private void ConvertFrameInstruction(Quad q)
         {
             var rA = getEmptyRegister();
@@ -430,7 +426,6 @@ namespace KXIParse
 
             CleanTempRegisters();
         }
-
         private void ConvertCallInstruction(Quad q)
         {
             var rA = getEmptyRegister();
@@ -449,7 +444,6 @@ namespace KXIParse
 
             CleanTempRegisters();
         }
-
         public static string TCodeString(List<Triad> triads)
         {
             var sb = new StringBuilder();
