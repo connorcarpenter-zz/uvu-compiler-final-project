@@ -314,6 +314,7 @@ namespace KXIParse
                         ConvertCallInstruction(q);
                         break;
                     case "RTN":
+                    case "RETURN":
                         ConvertRtnInstruction(q);
                         break;
                     case "END":
@@ -325,7 +326,25 @@ namespace KXIParse
 
         private void ConvertRtnInstruction(Quad q)
         {
-            throw new Exception("Need to implement the RTN method!!");
+ /*
+ ; Check for Underflow
+MOV SP FP
+MOV R0 SP
+CMP R0 SB
+BGT R0 UNDERFLOW
+
+; Set previous frame to current frame and return
+LDR R0 FP
+MOV R1 FP
+ADI R1 -4
+LDR FP R1
+STR SOMEREGISTER?! SP	; store return value
+JMR R0
+  
+  also: you need to make sure you don't deallocate registers with temp variables in them
+  */
+            var rA = getEmptyRegister();
+            var rB = getEmptyRegister();
         }
 
         private void ConvertMoveInstruction(Quad q)
