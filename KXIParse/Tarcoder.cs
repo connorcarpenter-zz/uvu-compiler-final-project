@@ -168,147 +168,13 @@ namespace KXIParse
             AddTriad("HEAP_SIZE", ".INT", Convert.ToString(heapSize), "", "", "");
             AddTriad("HEAP_START", "NOOP", "", "", "", "");
         }
-        private void addSymToReg(string register,string symId)
-        {
-            registers[register].Add(symId);
-            lastUsedRegister.RemoveAll(s => s.Equals(register));
-            lastUsedRegister.Add(register);
-        }
-        private string getEmptyRegister()
-        {
-            foreach (var r in registers)
-            {
-                if (r.Value.Count == 0 && r.Key!="R0")
-                {
-                    addSymToReg(r.Key,"%temp%");
-                    return r.Key;
-                }
-            }
-
-            //need to figure out how to free up registers
-            return getDeallocRegister();
-        }
-        private string getRegister(string symId = "")
-        {
-            if (symId == "")
-                throw new Exception("TCODE: Trying to get data for empty symbol id");
-
-            //check if this symid has data in a register already
-            checkLocationInit(symId);
-            foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
-                return l.Register;
-
-            //find out where to get the symbol
-            var symbol = symbolTable[symId];
-            switch(symbol.Kind)
-            {
-                case "literal":
-                {
-                    var register = getEmptyRegister();
-                    var loadOp = "LDR";
-                    if (symbol.Data.Type == "Character")
-                        loadOp = "LDB";
-                    AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
-                    addSymToReg(register,symId);
-                    locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
-                    CleanTempRegisters();
-                    return register;
-                }
-                case "temp":
-                case "lvar":
-                {
-                    var register1 = getEmptyRegister();
-                    var register2 = getEmptyRegister();
-                    AddTriad("", "MOV", register1, "FP", "", "");
-                    var offset = "" + (symbol.Offset*-4);
-                    AddTriad("", "ADI", register1, offset, "", "");
-                    AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
-                    addSymToReg(register2,symId);
-                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
-                    CleanTempRegisters();
-                    return register2;
-                }
-                default:
-                    throw new Exception("TCODE: Trying to get location of unknown symbol type");
-                    break;
-            }
-        }
-        private void CleanTempRegisters()
-        {
-            foreach (var register in registers)
-                register.Value.RemoveAll(s => s.Equals("%temp%"));
-        }
-        private string getDeallocRegister()
-        {
-            var register = lastUsedRegister.First();
-            if (DeallocRegister(register))
-            {
-                addSymToReg(register,"%temp%");
-                return register;
-            }
-
-            throw new Exception("TCODE: Error trying to dealloc register in getDeallocRegister()");
-        }
-        private bool DeallocRegister(string register)
-        {
-            if (registers[register].Contains("%temp%")) return false;
-            foreach (var sym in registers[register])
-            {
-                if(!symbolTable.ContainsKey(sym))
-                    throw new Exception("TCODE: Trying to deallocate register associated with unknown symbol: "+sym);
-                var symbol = symbolTable[sym];
-                switch (symbol.Kind)
-                {
-                    case "lvar":
-                    case "temp":
-                    {
-                        var register2 = getEmptyRegister();
-                        AddTriad("", "MOV", register2, "FP", "", "");
-                        var offset = "" + (symbol.Offset * -4);
-                        AddTriad("", "ADI", register2, offset, "", "");
-                        AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
-                        CleanTempRegisters();
-                    }
-                        break;
-                    case "literal":
-                        break;
-                    default:
-                        throw new Exception("TCODE: Trying to deallocate a register into an unknown symbol type");
-                }
-                locations[sym].RemoveAll(s => s.Register.Equals(register));
-            }
-
-            registers[register].Clear();
-            return true;
-        }
-        private void checkLocationInit(string symId)
-        {
-            if(!locations.ContainsKey(symId))
-                locations.Add(symId,new List<MemLoc>());
-        }
-        private void AddTriad(string label, string operation, string operand1, string operand2, string action, string comment)
-        {
-            if (tcodeList.LastOrDefault() != null && tcodeList.LastOrDefault().Operation.Equals("REPLACENEXT"))
-            {
-                var t = tcodeList.LastOrDefault();
-                t.Operation = operation;
-                t.Operand1 = operand1;
-                t.Operand2 = operand2;
-                t.Comment = comment;
-            }
-            else
-            {
-                var t = new Triad(label, operation, operand1, operand2, comment);
-                tcodeList.Add(t);
-            }
-        }
         private void Start()
         {
             AddTriad("", "", "", "", "", "; Main Program");
 
             foreach (var q in icodeList)
             {
-                if(q.Label.Length!=0)
+                if (q.Label.Length != 0)
                     AddTriad(q.Label, "REPLACENEXT", "", "", "", "");
                 switch (q.Operation)
                 {
@@ -340,10 +206,146 @@ namespace KXIParse
                 }
             }
         }
+
+        private void AddTriad(string label, string operation, string operand1, string operand2, string action, string comment)
+        {
+            if (tcodeList.LastOrDefault() != null && tcodeList.LastOrDefault().Operation.Equals("REPLACENEXT"))
+            {
+                var t = tcodeList.LastOrDefault();
+                t.Operation = operation;
+                t.Operand1 = operand1;
+                t.Operand2 = operand2;
+                t.Comment = comment;
+            }
+            else
+            {
+                var t = new Triad(label, operation, operand1, operand2, comment);
+                tcodeList.Add(t);
+            }
+        }
+        private string GetRegister(string symId = "")
+        {
+            if (symId == "")
+                throw new Exception("TCODE: Trying to get data for empty symbol id");
+
+            //check if this symid has data in a register already
+            CheckLocationInit(symId);
+            foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
+                return l.Register;
+
+            //find out where to get the symbol
+            var symbol = symbolTable[symId];
+            switch(symbol.Kind)
+            {
+                case "literal":
+                {
+                    var register = GetEmptyRegister();
+                    var loadOp = "LDR";
+                    if (symbol.Data.Type == "Character")
+                        loadOp = "LDB";
+                    AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
+                    RegisterAddSym(register,symId);
+                    locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
+                    CleanTempRegisters();
+                    return register;
+                }
+                case "temp":
+                case "lvar":
+                {
+                    var register1 = GetEmptyRegister();
+                    var register2 = GetEmptyRegister();
+                    AddTriad("", "MOV", register1, "FP", "", "");
+                    var offset = "" + (symbol.Offset*-4);
+                    AddTriad("", "ADI", register1, offset, "", "");
+                    AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
+                    RegisterAddSym(register2,symId);
+                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
+                    CleanTempRegisters();
+                    return register2;
+                }
+                default:
+                    throw new Exception("TCODE: Trying to get location of unknown symbol type");
+                    break;
+            }
+        }
+        private string GetEmptyRegister()
+        {
+            foreach (var r in registers)
+            {
+                if (r.Value.Count == 0 && r.Key != "R0")
+                {
+                    RegisterAddSym(r.Key, "%temp%");
+                    return r.Key;
+                }
+            }
+
+            //need to figure out how to free up registers
+            return GetAnyDeallocRegister();
+        }
+        private void RegisterAddSym(string register, string symId)
+        {
+            registers[register].Add(symId);
+            lastUsedRegister.RemoveAll(s => s.Equals(register));
+            lastUsedRegister.Add(register);
+        }
+        private void CleanTempRegisters()
+        {
+            foreach (var register in registers)
+                register.Value.RemoveAll(s => s.Equals("%temp%"));
+        }
+        private string GetAnyDeallocRegister()
+        {
+            var register = lastUsedRegister.First();
+            if (DeallocRegister(register))
+            {
+                RegisterAddSym(register,"%temp%");
+                return register;
+            }
+
+            throw new Exception("TCODE: Error trying to dealloc register in GetAnyDeallocRegister()");
+        }
+        private bool DeallocRegister(string register)
+        {
+            if (registers[register].Contains("%temp%")) return false;
+            foreach (var sym in registers[register])
+            {
+                if(!symbolTable.ContainsKey(sym))
+                    throw new Exception("TCODE: Trying to deallocate register associated with unknown symbol: "+sym);
+                var symbol = symbolTable[sym];
+                switch (symbol.Kind)
+                {
+                    case "lvar":
+                    case "temp":
+                    {
+                        var register2 = GetEmptyRegister();
+                        AddTriad("", "MOV", register2, "FP", "", "");
+                        var offset = "" + (symbol.Offset * -4);
+                        AddTriad("", "ADI", register2, offset, "", "");
+                        AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
+                        CleanTempRegisters();
+                    }
+                        break;
+                    case "literal":
+                        break;
+                    default:
+                        throw new Exception("TCODE: Trying to deallocate a register into an unknown symbol type");
+                }
+                locations[sym].RemoveAll(s => s.Register.Equals(register));
+            }
+
+            registers[register].Clear();
+            return true;
+        }
+        private void CheckLocationInit(string symId)
+        {
+            if(!locations.ContainsKey(symId))
+                locations.Add(symId,new List<MemLoc>());
+        }
+
         private void ConvertRtnInstruction(Quad q)
         {
-            var rA = getEmptyRegister();
-            var rB = getEmptyRegister();
+            var rA = GetEmptyRegister();
+            var rB = GetEmptyRegister();
 
             AddTriad("", "MOV", "SP", "FP", "", "; Checking for underflow");
             AddTriad("", "MOV", rA, "SP", "", "");
@@ -358,7 +360,7 @@ namespace KXIParse
             //check if there's a return value
             if(q.Operation.Equals("RETURN"))
             {
-                var retReg = getRegister(q.Operand1);
+                var retReg = GetRegister(q.Operand1);
                 AddTriad("", "STR", retReg, "SP", "", "; store return value");
             }
 
@@ -368,14 +370,14 @@ namespace KXIParse
         }
         private void ConvertMoveInstruction(Quad q)
         {
-            var rA = getRegister(q.Operand1);
-            var rB = getRegister(q.Operand2);
+            var rA = GetRegister(q.Operand1);
+            var rB = GetRegister(q.Operand2);
 
             AddTriad("", "MOV", rB, rA, "", "");
         }
         private void ConvertWriteInstruction(Quad q)
         {
-            var rA = getRegister(q.Operand2);
+            var rA = GetRegister(q.Operand2);
             if (rA != "R0")
             {
                 //put needed data into R0
@@ -399,16 +401,16 @@ namespace KXIParse
         }
         private void ConvertMathInstruction(Quad q)
         {
-            var rA = getRegister(q.Operand1);
-            var rB = getRegister(q.Operand2);
-            var rC = getRegister(q.Operand3);
+            var rA = GetRegister(q.Operand1);
+            var rB = GetRegister(q.Operand2);
+            var rC = GetRegister(q.Operand3);
 
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", q.Operation, rC, rB, "", "");
         }
         private void ConvertFrameInstruction(Quad q)
         {
-            var rA = getEmptyRegister();
+            var rA = GetEmptyRegister();
             //first test for overflow
             AddTriad("","MOV",rA,"SP","","; Settup up activation record for "+q.Operand1+" method");
             var methodSize = 8+(symbolTable[q.Operand1].Vars*4);
@@ -428,7 +430,7 @@ namespace KXIParse
         }
         private void ConvertCallInstruction(Quad q)
         {
-            var rA = getEmptyRegister();
+            var rA = GetEmptyRegister();
 
             //first make room for local variables
             var methodSize = symbolTable[q.Operand1].Vars;
