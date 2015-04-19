@@ -186,6 +186,8 @@ namespace KXIParse
                     case "SUB":
                     case "MUL":
                     case "DIV":
+                    case "AEF":
+                    case "REF":
                         ConvertMathInstruction(q);
                         break;
                     case "EQ":
@@ -196,11 +198,25 @@ namespace KXIParse
                     case "GE":
                         ConvertBoolInstruction(q);
                         break;
+                    case "AND":
+                    case "OR":
+                        ConvertLogicInstruction(q);
+                        break;
                     case "MOV":
                         ConvertMoveInstruction(q);
                         break;
+                    case "MOVI":
+                    {
+                        var rA = GetRegister(q.Operand1);
+                        AddTriad("", "SUB", rA, rA, "", string.Format("; move {0} into {1}", q.Operand2, rA));
+                        AddTriad("", "ADI", rA, q.Operand2, "", "");
+                    }
+                        break;
                     case "WRITE":
                         ConvertWriteInstruction(q);
+                        break;
+                    case "READ":
+                        ConvertReadInstruction(q);
                         break;
                     case "FRAME":
                         ConvertFrameInstruction(q);
@@ -221,21 +237,54 @@ namespace KXIParse
                     {
                         DeallocAllRegisters();
                         var rA = GetRegister(q.Operand1);
-                        AddTriad("", "BRZ", rA, q.Operand2, "", "; if "+rA+" == FALSE, GOTO " + q.Operand1);
+                        AddTriad("", "BRZ", rA, q.Operand2, "", "; if "+rA+" == FALSE, GOTO " + q.Operand2);
                     }
                         break;
                     case "BT":
                     {
                         DeallocAllRegisters();
                         var rA = GetRegister(q.Operand1);
-                        AddTriad("", "BNZ", rA, q.Operand2, "", "; if " + rA + " == TRUE, GOTO " + q.Operand1);
+                        AddTriad("", "BNZ", rA, q.Operand2, "", "; if " + rA + " == TRUE, GOTO " + q.Operand2);
                     }
                         break;
                     case "JMP":
                         DeallocAllRegisters();
                         AddTriad("","JMP",q.Operand1,"","","; GOTO "+q.Operand1);
                         break;
+                    case "PUSH":
+                        {
+                            var rA = GetRegister(q.Operand1);
+                            AddTriad("", "STR", rA, "SP", "", string.Format("; Push {0} on the stack; {0} is in {1}",q.Operand1,rA));
+                            AddTriad("", "ADI", "SP", "-4", "", "");
+                        }
+                        break;
+                    case "POP":
+                        {
+                            var rA = GetRegister(q.Operand1);
+                            AddTriad("", "ADI", "SP", "4", "", "");
+                            AddTriad("", "LDR", rA, "SP", "", string.Format("; Pop top of stack into {0} ({1})", q.Operand1, rA));
+                        }
+                        break;
+                    case "PEEK":
+                        {
+                            var rA = GetRegister(q.Operand1);
+                            var rB = GetEmptyRegister();
+                            AddTriad("", "MOV", rB, "SP", "", "");
+                            AddTriad("", "ADI", rB, "4", "", "");
+                            AddTriad("", "LDR", rA, rB, "", string.Format("; Peek the stack into {0} ({1})", q.Operand1, rA));
+                            CleanTempRegister(rB);
+                        }
+                        break;
+                    case "NEW":
+                    case "NEWI":
+                        ConvertNewInstruction(q);
+                        break;
+                    default:
+                        throw new Exception("TCODE: Can't process unimplemented ICODE instruction");
+                        break;
                 }
+
+                CleanInUseRegisters();
             }
         }
 
@@ -263,7 +312,11 @@ namespace KXIParse
             //check if this symid has data in a register already
             CheckLocationInit(symId);
             foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
+            {
+                LastUsedRegister(l.Register);
+                RegisterAddSym(l.Register,"%inuse%");
                 return l.Register;
+            }
 
             //find out where to get the symbol
             var symbol = symbolTable[symId];
@@ -277,8 +330,9 @@ namespace KXIParse
                         loadOp = "LDB";
                     AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
                     RegisterAddSym(register,symId);
+                    RegisterAddSym(register, "%inuse%");
                     locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
-                    CleanTempRegisters();
+                    CleanTempRegister(register);
                     return register;
                 }
                 case "temp":
@@ -291,8 +345,10 @@ namespace KXIParse
                     AddTriad("", "ADI", register1, offset, "", "");
                     AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
                     RegisterAddSym(register2,symId);
+                    RegisterAddSym(register2, "%inuse%");
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
-                    CleanTempRegisters();
+                    CleanTempRegister(register1);
+                    CleanTempRegister(register2);
                     return register2;
                 }
                 default:
@@ -300,11 +356,11 @@ namespace KXIParse
                     break;
             }
         }
-        private string GetEmptyRegister()
+        private string GetEmptyRegister(bool useReg0 = false)//only useReg0 when it's going to be in a small block with no other registers
         {
             foreach (var r in registers)
             {
-                if (r.Value.Count == 0 && r.Key != "R0")
+                if (r.Value.Count == 0 && (r.Key != "R0" || useReg0))
                 {
                     RegisterAddSym(r.Key, "%temp%");
                     return r.Key;
@@ -314,20 +370,39 @@ namespace KXIParse
             //need to figure out how to free up registers
             return GetAnyDeallocRegister();
         }
-        private void RegisterAddSym(string register, string symId)
+
+        private void LastUsedRegister(string register)
         {
-            registers[register].Add(symId);
             lastUsedRegister.RemoveAll(s => s.Equals(register));
             lastUsedRegister.Add(register);
         }
-        private void CleanTempRegisters()
+        private void RegisterAddSym(string register, string symId)
+        {
+            registers[register].Add(symId);
+            LastUsedRegister(register);
+        }
+
+        private void CleanTempRegister(string register)
+        {
+            registers[register].RemoveAll(s => s.Equals("%temp%"));
+        }
+        private void CleanInUseRegisters()
         {
             foreach (var register in registers)
-                register.Value.RemoveAll(s => s.Equals("%temp%"));
+                register.Value.RemoveAll(s => s.Equals("%inuse%"));
         }
         private string GetAnyDeallocRegister()
         {
             var register = lastUsedRegister.First();
+            var i = 0;
+            while (registers[register].Contains("%inuse%"))
+            {
+                LastUsedRegister(register);
+                register = lastUsedRegister.First();
+                i++;
+                if(i>10)
+                    throw new Exception("TCODE: All registers are currently in use...");
+            }
             if (DeallocRegister(register))
             {
                 RegisterAddSym(register,"%temp%");
@@ -349,12 +424,12 @@ namespace KXIParse
                     case "lvar":
                     case "temp":
                     {
-                        var register2 = GetEmptyRegister();
+                        var register2 = GetEmptyRegister(true);
                         AddTriad("", "MOV", register2, "FP", "", "");
                         var offset = "" + (symbol.Offset * -4);
                         AddTriad("", "ADI", register2, offset, "", "");
                         AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
-                        CleanTempRegisters();
+                        CleanTempRegister(register2);
                     }
                         break;
                     case "literal":
@@ -390,12 +465,37 @@ namespace KXIParse
             return "COMPARE" + compareLabels;
         }
 
+        private void ConvertNewInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand1);
+            var rB = q.Operand2;
+            if(q.Operation.Equals("NEW")) rB = GetRegister(q.Operand2);
+            var rC = GetEmptyRegister();
+
+            AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
+            AddTriad("", "MOV", rA, rC, "", "; save address into "+rA);
+            AddTriad("", q.Operation.Equals("NEW") ? "ADD" : "ADI", rC, rB, "", "");
+            AddTriad("", "STR", rC, "FREE_HEAP_POINTER", "", "; Update free heap pointer");
+            AddTriad("", q.Operation, rC, rB, "", "");
+
+            CleanTempRegister(rC);
+        }
+        private void ConvertLogicInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand1);
+            var rB = GetRegister(q.Operand2);
+            var rC = GetRegister(q.Operand3);
+
+            AddTriad("", "MOV", rC, rA, "", "");
+            AddTriad("", q.Operation, rC, rB, "", "");
+        }
         private void ConvertBoolInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand1);
             var rB = GetRegister(q.Operand2);
             var rC = GetRegister(q.Operand3);
 
+            //I switched rA and rB here, seems like that
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", "CMP", rC, rB, "", "");
 
@@ -449,7 +549,8 @@ namespace KXIParse
 
             AddTriad("", "JMR", rA, "", "", "");
 
-            CleanTempRegisters();
+            CleanTempRegister(rA);
+            CleanTempRegister(rB);
         }
         private void ConvertMoveInstruction(Quad q)
         {
@@ -482,14 +583,41 @@ namespace KXIParse
                 AddTriad("", "TRP", "1", "", "", "");
             }
         }
+        private void ConvertReadInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand2);
+
+            if (!DeallocRegister("R0"))
+            {
+                //this block only triggers when DeallocRegister fails
+                throw new Exception(
+                    "TCODE: Trying to deallocate temp variable in R0... If this happens consider making it so R0 can't hold temp variables?");
+            }
+
+            if (q.Operand1.Equals("2"))
+            {
+                AddTriad("", "TRP", "4", "", "", "");
+            }
+            else
+            {
+                AddTriad("", "TRP", "2", "", "", "");
+            }
+
+            AddTriad("", "MOV", rA, "R0", "", "; Reading user input into "+rA);
+        }
         private void ConvertMathInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand1);
             var rB = GetRegister(q.Operand2);
             var rC = GetRegister(q.Operand3);
+            var op = q.Operation;
+            if (op.Equals("REF") || op.Equals("AEF"))
+            {
+                op = "ADD";
+            }
 
             AddTriad("", "MOV", rC, rA, "", "");
-            AddTriad("", q.Operation, rC, rB, "", "");
+            AddTriad("", op, rC, rB, "", "");
         }
         private void ConvertFrameInstruction(Quad q)
         {
@@ -509,7 +637,7 @@ namespace KXIParse
             AddTriad("", "STR", rA, "SP", "", "; PFP to Top of Stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
-            CleanTempRegisters();
+            CleanTempRegister(rA);
         }
         private void ConvertCallInstruction(Quad q)
         {
@@ -527,7 +655,7 @@ namespace KXIParse
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
             AddTriad("", "JMP", q.Operand1, "", "", "");
 
-            CleanTempRegisters();
+            CleanTempRegister(rA);
         }
         public static string TCodeString(List<Triad> triads)
         {

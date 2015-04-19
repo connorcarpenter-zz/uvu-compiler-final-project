@@ -22,10 +22,10 @@ namespace KXIParse
 
         private static readonly Dictionary<Operator, int> OpPriority = new Dictionary<Operator, int> //this is golf rules here boys
             {
-                { Operator.Multiply, 3 }, { Operator.Divide, 3 },
-                { Operator.Add, 2 }, { Operator.Subtract, 2 },
-                { Operator.Less, 1 }, { Operator.More, 1 },{ Operator.LessOrEqual, 1 }, { Operator.MoreOrEqual, 1 },
-                { Operator.Equals, 1 }, { Operator.NotEquals, 1 },{ Operator.And, 1 }, { Operator.Or, 1 },
+                { Operator.Multiply, 4 }, { Operator.Divide, 4 },
+                { Operator.Add, 3 }, { Operator.Subtract, 3 },
+                { Operator.Less, 2 }, { Operator.More, 2 },{ Operator.LessOrEqual, 2 }, { Operator.MoreOrEqual, 2 },{ Operator.Equals, 2 }, { Operator.NotEquals, 2 },
+                { Operator.And, 1 }, { Operator.Or, 1 },
                 { Operator.ParenBegin, 0 }, { Operator.ArrayBegin, 0 } , { Operator.Assignment, -1 } , {Operator.Comma,0}
             };
         private static Stack<Record> _recordStack;
@@ -593,12 +593,15 @@ namespace KXIParse
                     result = new Record(
                             RecordType.Temporary,
                             _intercoder.GetTempVarName(i2),
-                            new Symbol { Data = new Data { Type = type } });
+                            new Symbol { Data = new Data { Type = type }, Scope = i1.LinkedSymbol.Scope  });
                     result.TempVariable = i1.Value + "." + i2.Value;
                      _recordStack.Push(result);
                 }
 
-                _intercoder.WriteOperation(nextOp, i1, i2, result);
+                if (nextOp == Operator.Less || nextOp == Operator.More || nextOp == Operator.LessOrEqual || nextOp == Operator.MoreOrEqual || nextOp == Operator.Subtract|| nextOp == Operator.Divide)
+                    _intercoder.WriteOperation(nextOp, i2, i1, result);//CONNORWAZHERE
+                else
+                    _intercoder.WriteOperation(nextOp, i1, i2, result);//CONNORWAZHERE
             }
         }
 

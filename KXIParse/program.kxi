@@ -1,17 +1,22 @@
 void kxi2015 main() // This is the main function
 {
-	int a = 16;
-	int b = 19;
-	if(a>b)
+	int a = 0;
+	int b = 37;
+	char n = '\n';
+
+	cin >> a;
+	if(a<b)
 	{
 		cout<<a;
 		cout<<'<';
 		cout<<b;
+		cout<<n;
 	}
 	else
 	{
 		cout<<a;
 		cout<<'>';
 		cout<<b;
+		cout<<n;
 	}
 }
