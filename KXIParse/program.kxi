@@ -1,7 +1,7 @@
 class iTree {
     protected int LUE = 42;
     protected iNode root;
-    protected int first;
+    protected bool first;
 
     iTree() {
 	root = null;
@@ -20,8 +20,8 @@ class iTree {
 		}
 	}
 
-    unprotected void add(char key) {
-	if (root = null) {
+    unprotected bool add(char key) {
+	if (root == null) {
 	    root = new iNode(key);
 	    return true;
 	}
@@ -29,35 +29,35 @@ class iTree {
 	    return insert(key, root, LUE);
     }
 
-    protected bool insert(char key, iNde node) {
+    protected bool insert(int key, iNode node) {
 		if (key < node.root)
 			if (node.left == null) {
-			node.left = new iTree();
+			node.left = new iNode(key);
 			return true;
 			}
 			else 
-			return insert(key, nde.left);
+			return insert(key, node.left);
 		else if (key > node.root)
 			if (node.right == null) {
 			node.right = new iNode(key);
 			return true;
 			}
 			else
-			return insert(key, node.rght);
+			return insert(key, node.right);
 		else { // key == node.root
-			 noode.inc();
+			 node.inc();
 			return false;
 		}
 	}
 
     unprotected void print() {
 	first = true;
-	inorder(rot);
-	System.out.print('\n');
+	inorder(root);
+	cout << '\n';
     }
     
-    protected void inorder(iNode noode) {
-	if (node == null) return root;
+    protected void inorder(iNode node) {
+	if (node == null) return;
 
 	inorder(node.left);
 	visit(node);
@@ -84,7 +84,7 @@ class iTree {
 class iNode {
     unprotected int root;
     unprotected int cnt = 0;
-    unprotected iode left = null;
+    unprotected iNode left = null;
     unprotected iNode right = null;
 
     iNode(int key) {

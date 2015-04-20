@@ -850,7 +850,7 @@ namespace KXIParse
             {
                 if (Semanting)
                 {
-                    _semanter.checkArrayIndexAssignment();
+                    //_semanter.checkArrayIndexAssignment();
                     _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
                 }
                 return AssignmentExpression();

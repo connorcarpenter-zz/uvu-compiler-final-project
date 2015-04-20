@@ -682,8 +682,18 @@ namespace KXIParse
         {
             var rA = GetEmptyRegister();
             var rB = rA;
-            if(q.Operand2!="null")
-                rB = GetRegister(q.Operand2);
+            if (!q.Operand2.Equals("null"))
+            {
+                if (q.Operand2.Equals("this"))
+                {
+                    rB = GetEmptyRegister();
+                    AddTriad("", "MOV", rB, "FP", "", "");
+                    AddTriad("", "ADI", rB, "-8", "", "");
+                    AddTriad("", "LDR", rB, rB, "", "; this pointer should now be in "+rB);
+                }
+                else
+                    rB = GetRegister(q.Operand2);
+            }
 
             //first test for overflow
             AddTriad("","MOV",rA,"SP","","; Settup up activation record for "+q.Operand1+" method");
@@ -703,6 +713,8 @@ namespace KXIParse
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
             CleanTempRegister(rA);
+            if (q.Operand2.Equals("this"))
+                CleanTempRegister(rB);
         }
         private void ConvertCallInstruction(Quad q)
         {

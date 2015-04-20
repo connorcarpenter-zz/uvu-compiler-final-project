@@ -120,13 +120,21 @@ namespace KXIParse
                 Type = RecordType.NewArray,
                 TempVariable = _intercoder.GetTempVarName(typeSar)
             };
-            newSar.LinkedSymbol = GetSizeRecord(newSar);
-            _recordStack.Push(newSar);
+            
 
-            if(arrayInit)
+            if (arrayInit)
+            {
+                newSar.LinkedSymbol = GetSizeRecord(newSar);
+                _recordStack.Push(newSar);
                 _intercoder.WriteNewArray(index, typeSar, newSar);
+            }
             else
+            {
+                //newSar.LinkedSymbol = GetSizeRecord(newSar);
+                newSar.LinkedSymbol.Data.IsArray = false;
+                _recordStack.Push(newSar);
                 _intercoder.WriteArray(index, typeSar, newSar);
+            }
 
             if (DEBUG) Console.WriteLine("   newArray");
         }
@@ -188,13 +196,27 @@ namespace KXIParse
         {
             var argumentList = _recordStack.Pop();
             var functionName = _recordStack.Pop();
+            var peekRecord = (_recordStack.Count > 0) ? _recordStack.Peek() : null;
+            
             var newRecord = new Record(functionName)
             {
-                Type = RecordType.Func, 
+                Type = RecordType.Func,
                 ArgumentList = argumentList.ArgumentList
             };
 
-            _intercoder.WriteFunctionCall(newRecord, argumentList, (_recordStack.Count > 0) ? _recordStack.Peek() : null, functionName,true);
+
+            if (newRecord.LinkedSymbol == null || newRecord.LinkedSymbol.SymId == null ||
+                newRecord.LinkedSymbol.SymId.Length == 0)
+            {
+                var symbol = (from s in _symbolTable
+                              where s.Value.Scope == "g." + peekRecord.LinkedSymbol.Data.Type &&
+                                  s.Value.Value == functionName.Value &&
+                                  s.Value.Data.AccessMod.Equals("unprotected") &&
+                                  s.Value.Kind.Equals("method")
+                              select s.Value).FirstOrDefault();
+                newRecord.LinkedSymbol = symbol;
+            }
+            _intercoder.WriteFunctionCall(newRecord, argumentList, peekRecord, functionName,true);
 
             _recordStack.Push(newRecord);
 
@@ -452,7 +474,7 @@ namespace KXIParse
 
                 if (childId.Type == RecordType.Func)
                 {
-                    _intercoder.WriteFunctionCall((_recordStack.Count > 0) ? _recordStack.Peek() : null, newRecord,childId,parentId);
+                    //_intercoder.WriteFunctionCall((_recordStack.Count > 0) ? _recordStack.Peek() : null, newRecord,childId,parentId);
                 }
                 else
                 {
@@ -649,7 +671,9 @@ namespace KXIParse
             {"Null","null"},
             {"Number","int"},
             {"Character","char"},
-            {"Bool","bool"}
+            {"Bool","bool"},
+            {"True","bool"},
+            {"False","bool"}
         };
 
 
