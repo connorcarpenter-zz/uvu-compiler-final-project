@@ -1,6 +1,6 @@
 void kxi2015 main() // This is the main function
 {
-	int[] x = new int[10];
+	int x[] = new int[10];
 	int i = 0;
 	char n = '\n';
 	x[i]=i+1;

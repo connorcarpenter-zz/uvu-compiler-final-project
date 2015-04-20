@@ -209,9 +209,9 @@ namespace KXIParse
                         break;
                     case "MOVI":
                     {
-                        var rA = GetRegister(q.Operand1);
-                        AddTriad("", "SUB", rA, rA, "", string.Format("; move {0} into {1}", q.Operand2, rA));
-                        AddTriad("", "ADI", rA, q.Operand2, "", "");
+                        var rA = GetRegister(q.Operand2);
+                        AddTriad("", "SUB", rA, rA, "", string.Format("; move {0} into {1}", q.Operand1, rA));
+                        AddTriad("", "ADI", rA, q.Operand1, "", "");
                     }
                         break;
                     case "WRITE":
@@ -674,10 +674,6 @@ namespace KXIParse
             var rB = GetRegister(q.Operand2);
             var rC = GetRegister(q.Operand3);
             var op = q.Operation;
-            if (op.Equals("REF") || op.Equals("AEF"))
-            {
-                op = "ADD";
-            }
 
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", op, rC, rB, "", "");
