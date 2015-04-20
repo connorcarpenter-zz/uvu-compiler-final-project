@@ -914,7 +914,7 @@ namespace KXIParse
                 }
             }
 
-            while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
+            while (Peek(TokenType.Type) && (Peek(TokenType.Identifier,2) || Peek(TokenType.ArrayBegin,2)))
                 VariableDeclaration();
             while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))
                 Statement();
