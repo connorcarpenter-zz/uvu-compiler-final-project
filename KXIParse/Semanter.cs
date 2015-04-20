@@ -124,7 +124,7 @@ namespace KXIParse
 
             if (arrayInit)
             {
-                newSar.LinkedSymbol = GetSizeRecord(newSar);
+                newSar.LinkedSymbol = GetSizeRecord(newSar,lineNumber);
                 _recordStack.Push(newSar);
                 _intercoder.WriteNewArray(index, typeSar, newSar);
             }
@@ -139,7 +139,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   newArray");
         }
 
-        private Symbol GetSizeRecord(Record newSar)
+        private Symbol GetSizeRecord(Record newSar, int lineNumber)
         {
             //////make the sizes in here constants man!!!!
             if (newSar.Value.Equals("int"))
@@ -149,6 +149,9 @@ namespace KXIParse
             if (newSar.Value.Equals("bool"))
                 return new Symbol { Data = new Data { Size = 1 } };
             var symbol = _symbolTable.FirstOrDefault(s => s.Value.Kind == "Class" && s.Value.Value == newSar.Value);
+            if (symbol.Key == null && symbol.Value == null)
+                throw new Exception(string.Format("Semantic Error at line {0}: No class found with the name: {1}",
+                    lineNumber, newSar.Value));
             return symbol.Value;
         }
 
@@ -212,7 +215,7 @@ namespace KXIParse
                               where s.Value.Scope == "g." + peekRecord.LinkedSymbol.Data.Type &&
                                   s.Value.Value == functionName.Value &&
                                   s.Value.Data.AccessMod.Equals("unprotected") &&
-                                  s.Value.Kind.Equals("method")
+                                  s.Value.Kind.ToLower().Equals("method")
                               select s.Value).FirstOrDefault();
                 newRecord.LinkedSymbol = symbol;
             }
@@ -374,7 +377,7 @@ namespace KXIParse
                 expCompare = (methodName.Equals("main") && scope.Equals("g.main")) ? "void" : GetCompareString(expressionSar);
                 var methodScope = scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
                 var method =
-                    _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind == "method" && s.Value.Value == methodName)
+                    _symbolTable.Where(s => s.Value.Scope == methodScope && s.Value.Kind.ToLower().Equals("method") && s.Value.Value == methodName)
                         .Select(s => s.Value)
                         .FirstOrDefault();
                 if (method == null)
@@ -445,11 +448,11 @@ namespace KXIParse
             var methodName = scope.Split('.').Last();
             var methodScope = methodName.Equals("g") ? "g" : scope.Remove(scope.Length - methodName.Length - 1, methodName.Length + 1);
             var inMethod = _symbolTable.Any(
-                s => (s.Value.Kind == "method" || s.Value.Kind == "Constructor") && s.Value.Value == methodName && s.Value.Scope == methodScope);
+                s => (s.Value.Kind.ToLower().Equals("method") || s.Value.Kind == "Constructor") && s.Value.Value == methodName && s.Value.Scope == methodScope);
 
             var symbol = (from s in _symbolTable where s.Value.Scope == scope && s.Value.Value == identifier.Value && (s.Value.Kind == "lvar" || s.Value.Kind == "param" || s.Value.Kind == "Class") select s.Value).FirstOrDefault();
             if (symbol == null && inMethod)
-                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind == "method" || s.Value.Kind == "Constructor") select s.Value).FirstOrDefault();
+                symbol = (from s in _symbolTable where s.Value.Scope == methodScope && s.Value.Value == identifier.Value && (s.Value.Kind == "ivar" || s.Value.Kind.ToLower().Equals("method") || s.Value.Kind == "Constructor") select s.Value).FirstOrDefault();
 
             return symbol;
         }

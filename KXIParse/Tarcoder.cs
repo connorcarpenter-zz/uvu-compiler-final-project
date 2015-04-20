@@ -70,7 +70,7 @@ namespace KXIParse
             symbolTable = _symbolTable;
 
             //make main method
-            symbolTable.Add("MAIN", new Symbol { Kind = "Method", Scope = "g", SymId = "MAIN", Value = "main", Vars = 0 });
+            symbolTable.Add("MAIN", new Symbol { Kind = "method", Scope = "g", SymId = "MAIN", Value = "main", Vars = 0 });
             PostProcessSymTable(symbolTable, "param");
             PostProcessSymTable(symbolTable, "lvar");
             PostProcessSymTable(symbolTable, "ivar");
@@ -115,7 +115,7 @@ namespace KXIParse
                     case "temp":
                     {
                         //we're looking for a method
-                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.Equals("Method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))
+                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))
                         {
                             sym2.Value.Vars++;
                             sym1.Value.Offset = sym2.Value.Vars;
@@ -127,7 +127,7 @@ namespace KXIParse
                 }
 
                 if(!found)
-                    throw new Exception("Syntax error: can't find class/method to associate with new variable/parameter");
+                    throw new Exception("Tarcode error: can't find class/method to associate with new variable/parameter");
             }
         }
         public List<Triad> Generate()
@@ -335,6 +335,7 @@ namespace KXIParse
                 }
                 case "temp":
                 case "lvar":
+                case "param":
                 {
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
@@ -440,6 +441,7 @@ namespace KXIParse
                 {
                     case "lvar":
                     case "temp":
+                    case "param":
                     {
                         var register2 = GetEmptyRegister(true);
                         AddTriad("", "MOV", register2, "FP", "", "");

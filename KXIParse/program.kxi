@@ -178,24 +178,23 @@ class Syntax {
       unprotected bool b = false;
 
       Syntax(int j, char d) {
-         i = d;
-         c = j;
+         i = j;
+         c = d;
       }
 
       unprotected void checkit() {
          char cc[] = new char[1000];
 	 int  ii[] = new int[512];
-	 Syntax ss[] = new Synax[256];
+	 Syntax ss[] = new Syntax[256];
+	 int iii = 0;
 
 	 cc[1] = cc[2]; // yes
 	 cc[31] = cc;   
-	 cc[100] = 5 + i;
+	 cc[100] = c;
 	 cc[10] = c;     // yes
 	 
-	 ii[] = ii[]; 
 	 i[4] = 5 + i;
 	 ii[5000] = 5 + i; // yes
-	 ii = ss;
 	 i = ii[0];  // yes
 
 	 ss[0] = new Syntax(7, 'c', 3);
@@ -244,13 +243,13 @@ void kxi2015 main() {
     cout << '\n';
     while (key != '!') 
 	{
-		if (tree.add(ky, key)) {
+		if (tree.add(key, key)) {
 			msg.msg1(key);
 			tree.print();
 		}
 		else {
 			msg.msg2('k');
-			tre.prin();
+			tree.print();
 
 
 		msg.msg3();

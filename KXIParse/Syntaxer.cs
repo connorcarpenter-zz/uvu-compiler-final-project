@@ -421,7 +421,7 @@ namespace KXIParse
                 //add method to symbol table
                 if (Syntaxing)
                 {
-                    var symId = GenerateSymId("Method");
+                    var symId = GenerateSymId("method");
                     _syntaxSymbolTable.Add(symId,
                         new Symbol()
                         {
