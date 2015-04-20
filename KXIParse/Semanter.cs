@@ -582,6 +582,15 @@ namespace KXIParse
                 var i1 = _recordStack.Pop();
                 var i2 = _recordStack.Pop();
                 Record result = null;
+                if (i1.Value.Equals("Null"))
+                {
+                    var i2type = i2.LinkedSymbol.Data.Type;
+                    if (_symbolTable.Any(s => s.Value.Kind == "Class" && s.Value.Value.Equals(i2type)))
+                    {
+                        i1.Type = RecordType.Identifier;
+                        i1.LinkedSymbol.Data.Type = i2type;
+                    }
+                }
                 CheckRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
 
                 if (nextOp != Operator.Assignment)
@@ -637,6 +646,7 @@ namespace KXIParse
 
         private static readonly Dictionary<string,string> ValueMap = new Dictionary<string,string>
         {
+            {"Null","null"},
             {"Number","int"},
             {"Character","char"},
             {"Bool","bool"}

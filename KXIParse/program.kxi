@@ -1,4 +1,4 @@
-class iTreee {
+class iTree {
     protected int LUE = 42;
     protected iNode root;
     protected int first;
