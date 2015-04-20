@@ -1,12 +1,10 @@
-class Cat
-{
-	unprotected int paws = 4;
-	Cat()
-	{
-	}
-}
 void kxi2015 main() // This is the main function
 {
-	Cat c = new Cat();
-	cout << c.paws;
+	int[] x = new int[10];
+	int i = 0;
+	char n = '\n';
+	x[i]=i+1;
+	cout << i;
+	cout << n;
+	cout << x[i];
 }

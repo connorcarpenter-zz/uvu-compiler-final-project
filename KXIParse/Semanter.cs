@@ -337,7 +337,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   checkRelease");
         }
 
-        public void checkReturn(string scope,int lineNumber,bool hasValue)
+        public void checkReturn(string scope,int lineNumber,bool hasValue,bool returnThis)
         {
             var scopes = scope.Split('.');
             var methodName = scopes[scopes.Length - 1];
@@ -373,7 +373,7 @@ namespace KXIParse
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to return a value of type '{1}' from method '{2}' which is set to return value of type '{3}'",
                     lineNumber, expCompare, methodName, methodType));
 
-            _intercoder.WriteReturn(methodType,expressionSar);
+            _intercoder.WriteReturn(methodType,expressionSar,returnThis);
 
             if (DEBUG) Console.WriteLine("   checkReturn");
         }

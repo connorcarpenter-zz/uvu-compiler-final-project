@@ -270,11 +270,7 @@ namespace KXIParse
                     case "PEEK":
                         {
                             var rA = GetRegister(q.Operand1);
-                            var rB = GetEmptyRegister();
-                            AddTriad("", "MOV", rB, "SP", "", "");
-                            AddTriad("", "ADI", rB, "4", "", "");
-                            AddTriad("", "LDR", rA, rB, "", string.Format("; Peek the stack into {0} ({1})", q.Operand1, rA));
-                            CleanTempRegister(rB);
+                            AddTriad("", "LDR", rA, "SP", "", string.Format("; Peek the stack into {0} ({1})", q.Operand1, rA));
                         }
                         break;
                     case "NEW":
@@ -359,9 +355,9 @@ namespace KXIParse
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
                     AddTriad("", "MOV", register1, "FP", "", "");
-                    AddTriad("", "ADI", register1, "-8", "", "; the pointer to the THIS pointer on the stack is now in " + register1);
-                    AddTriad("", "LDR", register1, register1, "", "");
-                    var offset = "" + ((symbol.Offset) * 4);
+                    AddTriad("", "ADI", register1, "-8", "", "");
+                    AddTriad("", "LDR", register1, register1, "", "; the pointer to the THIS pointer on the stack is now in " + register1);
+                    var offset = "" + ((symbol.Offset-1) * 4);
                     AddTriad("", "ADI", register1, offset, "", "");
                     AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
                     RegisterAddSym(register2, symId);
@@ -460,7 +456,7 @@ namespace KXIParse
                             AddTriad("", "ADI", register2, "-8", "", "; the pointer to the THIS pointer on the stack is now in "+register2);
 
                             AddTriad("", "LDR", register2, register2, "", "; the THIS pointer on the stack is now in " + register2);
-                            var offset = "" + (symbol.Offset * 4);
+                            var offset = "" + ((symbol.Offset-1) * 4);
                             AddTriad("", "ADI", register2, offset, "", "");
                             AddTriad("", "STR", register, register2, "", "; " + register + " is now in " + sym);
                             CleanTempRegister(register2);
@@ -574,11 +570,23 @@ namespace KXIParse
             AddTriad("", "ADI", rB, "-4", "", "");
             AddTriad("", "LDR", "FP", rB, "", "");
 
+
             //check if there's a return value
             if(q.Operation.Equals("RETURN"))
             {
-                var retReg = GetRegister(q.Operand1);
-                AddTriad("", "STR", retReg, "SP", "", "; store return value");
+                if (q.Operand1.Equals("this"))
+                {
+                    var retReg = GetEmptyRegister();
+                    AddTriad("", "ADI", rB, "-4", "", "");
+                    AddTriad("", "LDR", retReg, rB, "", "; loading this pointer into "+retReg);
+                    AddTriad("", "STR", retReg, "SP", "", "; store return value");
+                    CleanTempRegister(retReg);
+                }
+                else
+                {
+                    var retReg = GetRegister(q.Operand1);
+                    AddTriad("", "STR", retReg, "SP", "", "; store return value");
+                }
             }
 
             AddTriad("", "JMR", rA, "", "", "");
@@ -646,7 +654,7 @@ namespace KXIParse
             var rB = GetEmptyRegister();//needs to be the offset of operand2
 
             AddTriad("", "CMP", rB, rB, "", "");
-            var offset = symbolTable[q.Operand2].Offset;
+            var offset = symbolTable[q.Operand2].Offset-1;
             for (var i = 0; i < offset; i++)
             {
                 AddTriad("", "ADI", rB, "4", "", "");
@@ -655,8 +663,8 @@ namespace KXIParse
             
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", "ADD", rC, rB, "", "");
-            AddTriad("", "LDR", rB, "FREE_HEAP_POINTER", "", "; Load address of free heap");
-            AddTriad("", "ADD", rC, rB, "", "");
+            //AddTriad("", "LDR", rB, "FREE_HEAP_POINTER", "", "; Load address of free heap");
+            //AddTriad("", "ADD", rC, rB, "", "");
             AddTriad("", "LDR", rC, rC, "", string.Format("; ref: {0}'s {1} is now in {2}",rA,rB,rC));
             CleanTempRegister(rB);
         }

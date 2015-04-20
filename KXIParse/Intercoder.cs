@@ -289,13 +289,20 @@ namespace KXIParse
             WriteQuad(laster, "", "", "", "OPENLABELSLOT", "while");
         }
 
-        public void WriteReturn(string type,Record r)
+        public void WriteReturn(string type, Record r, bool returnThis)
         {
-            if(type.Equals("void") || r==null)
-                WriteQuad("","RTN","","","","return");
+            if (returnThis)
+            {
+                WriteQuad("", "RETURN", "this", "", "", "return");
+            }
             else
-                WriteQuad("", "RETURN", ToOperand(r), "", "", "return");
-        }
+            {
+                if (type.Equals("void") || r == null)
+                    WriteQuad("", "RTN", "", "", "", "return");
+                else
+                    WriteQuad("", "RETURN", ToOperand(r), "", "", "return");
+            }
+    }
 
         public void WriteCout(Record r)
         {

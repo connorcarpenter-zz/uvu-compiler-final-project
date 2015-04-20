@@ -185,11 +185,13 @@ namespace KXIParse
             if (_recording)
             {
                 _recordTokens.Insert(_recordTokens.Count - 1,new Token(TokenType.Return,"return",lastToken.LineNumber));
+                _recordTokens.Insert(_recordTokens.Count - 1, new Token(TokenType.This, "this", lastToken.LineNumber));
                 _recordTokens.Insert(_recordTokens.Count - 1, new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
             }
             else
             {
                 _insertTokens.Insert(_insertTokens.Count - 1, new Token(TokenType.Return, "return", lastToken.LineNumber));
+                _insertTokens.Insert(_insertTokens.Count - 1, new Token(TokenType.This, "this", lastToken.LineNumber));
                 _insertTokens.Insert(_insertTokens.Count - 1, new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
             }
         }
@@ -253,6 +255,7 @@ namespace KXIParse
                     foreach(var r in _insertTokens)
                         _recordTokens.Add(r);
                     _recordTokens.Add(new Token(TokenType.Return, "return", lastToken.LineNumber));
+                    _recordTokens.Add(new Token(TokenType.Return, "this", lastToken.LineNumber));
                     _recordTokens.Add(new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
                     _recordTokens.Add(new Token(TokenType.BlockEnd, "}", lastToken.LineNumber));
 
@@ -1048,17 +1051,20 @@ namespace KXIParse
             }
             if (Accept(TokenType.Return))
             {
+                var returnThis = Accept(TokenType.This);//hopefully this is okay
                 if (Accept(TokenType.Semicolon))
                 {
                     if (Semanting)
-                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber, false);
+                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber, false,returnThis);
                 }
                 else
                 {
+                    if(returnThis)
+                        throw new Exception("Semantic Error: Your extra 'return this' statement blew up :( Line "+lastToken.LineNumber);
                     Expression();
                     Expect(TokenType.Semicolon);
                     if (Semanting)
-                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber,true);
+                        _semanter.checkReturn(GetScopeString(), lastToken.LineNumber,true,false);
                 }
                 
                 return;
