@@ -174,6 +174,9 @@ namespace KXIParse
                         case "while":
                             LabelBackPatch(laster.Label, label);
                             break;
+                        case "method":
+                            WriteQuad("", "MOV", "R0", "R0", "", "empty");
+                            break;
                         default:
                             throw new Exception("Really don't think there should be backpatching outside an if or while");
                             break;
@@ -322,9 +325,12 @@ namespace KXIParse
            //     IntercodeList.Remove(lastOrDefault);
         }
 
-        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4)
+        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4,bool isThis = false)
         {
-            WriteQuad("","FRAME",r1.LinkedSymbol.SymId,r4.TempVariable.ToString(),"","function");
+            var tempVariable = "this";
+            if (!isThis)
+                tempVariable = r4.TempVariable.ToString();
+            WriteQuad("","FRAME",r1.LinkedSymbol.SymId,tempVariable,"","function");
             if (r2.ArgumentList != null && r2.ArgumentList.Count > 0)
             {
                 foreach (var a in r2.ArgumentList)
@@ -337,7 +343,7 @@ namespace KXIParse
         {
             var tempVar = GetTempVarName(r);
             WriteQuad("", "PEEK", tempVar, "", "", "function");
-            _tempVarNames.Pop();
+            //_tempVarNames.Pop();
         }
 
         public void WriteArray(Record r1, Record r2, Record r3)

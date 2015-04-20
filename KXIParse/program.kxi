@@ -8,12 +8,19 @@ class iTree {
     }
 
     protected int fib(int root) {
-	if (root == 0) return 0;
-	else if (root == 1) return jj;
-	else return (fib(root - 1) + fib(root - 2));
-    }
+		if (root == 0) return 0;
+		else
+		{
+			if (root == 1)
+			{
+				return 1;
+			}
+			else 
+				return (fib(root - 1) + fib(root - 2));
+		}
+	}
 
-    unprotected void add(chr key) {
+    unprotected void add(char key) {
 	if (root = null) {
 	    root = new iNode(key);
 	    return true;

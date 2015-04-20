@@ -194,7 +194,7 @@ namespace KXIParse
                 ArgumentList = argumentList.ArgumentList
             };
 
-            //_intercoder.WriteFunctionCall((_recordStack.Count>0) ? _recordStack.Peek() : null, newRecord);
+            _intercoder.WriteFunctionCall(newRecord, argumentList, (_recordStack.Count > 0) ? _recordStack.Peek() : null, functionName,true);
 
             _recordStack.Push(newRecord);
 
