@@ -915,7 +915,7 @@ namespace KXIParse
 
             if (Syntaxing)
             {
-                if (_insertTokens != null && _insertTokens.Count > 0 && !ConstructorCreated && _scope.Count()>=3 && _scope[1].Equals(_scope[2]))
+                if (_insertTokens != null && !ConstructorCreated && _scope.Count()>=3 && _scope[1].Equals(_scope[2])) /*took out checking if instertokens.Count>0*/
                 {
                     foreach(var r in _insertTokens)
                         _recordTokens.Add(r);
@@ -997,7 +997,7 @@ namespace KXIParse
         private void Statement()
         {
             if (DEBUGMETA) Console.WriteLine("--Statement");
-            if (lastToken.LineNumber == 196)
+            if (lastToken.LineNumber == 162)
             {
                 var x = 7;
             }
