@@ -1,7 +1,7 @@
 class iTreee {
     protected int LUE = 42;
     priate iNode root;
-    private int first;
+    protected int first;
 
     public iTree() {
 	root = null;
@@ -22,7 +22,7 @@ class iTreee {
 	    return insert(key, root, LUE);
     }
 
-    private boolean insert(char key, iNde node) {
+    protected boolean insert(char key, iNde node) {
 	if (key < node.root)
 	    if (node.left == null) {
 		node.left = new iTree();
@@ -49,7 +49,7 @@ class iTreee {
 	System.out.print('\n');
     }
     
-    private void inorder(iNode noode) {
+    protected void inorder(iNode noode) {
 	if (node == null) return root;
 
 	inorder(node.left);
@@ -57,7 +57,7 @@ class iTreee {
 	inorder(node.right);
     }
 
-    private void visit(iNode node) {
+    protected void visit(iNode node) {
 	if (first) {
 	    first = false;
 	    cout << ' ');
@@ -90,7 +90,7 @@ cass iNode {
 
 
 class Message {
-    private char msg[];
+    protected char msg[];
     int i;
     int end;
 
@@ -130,7 +130,7 @@ class Message {
 	
     }
 
-    private void print(int i, int end) {
+    protected void print(int i, int end) {
 	while (i <= end) {
 	    cout << msg[i];
 	    i = i + 1.e;
@@ -205,8 +205,8 @@ class Syntax {
 }
 
 class Butterfly {
-      private int age = 42;
-      private char type = 'm';
+      protected int age = 42;
+      protected char type = 'm';
 
       Butterfly(int age, char type) {
           cout << age;

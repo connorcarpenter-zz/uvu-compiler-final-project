@@ -117,6 +117,8 @@ namespace KXIParse
 
         private static bool Accept(TokenType value)
         {
+            if (GetToken() == null)
+                return false;
             if (!TokenData.EqualTo(GetToken().Type, value))
                 return false;
             lastToken = GetToken();
@@ -136,11 +138,23 @@ namespace KXIParse
         {
             if (Accept(value))
                 return true;
+            var lineNumber = 0;
+            var name = "";
+            if (GetToken() != null)
+            {
+                lineNumber = GetToken().LineNumber;
+                name = TokenData.Get()[GetToken().Type].Name;
+            }
+            else
+            {
+                lineNumber = lastToken.LineNumber;
+                name = "NOOOOOTHINNNNNG!!!!!";
+            }
             throw new Exception(string.Format(
                             "Syntax error at line {0}. Expected a token of type: {1}, but found a: {2}",
-                            GetToken().LineNumber,
+                            lineNumber,
                             TokenData.Get()[value].Name,
-                            TokenData.Get()[GetToken().Type].Name
+                            name
                             ));
             return false;
         }
@@ -916,7 +930,7 @@ namespace KXIParse
 
             while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
                 VariableDeclaration();
-            while (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type))
+            while (GetToken()!=null && (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type)))
                 Statement();
             Expect(TokenType.BlockEnd);
         }
@@ -983,6 +997,10 @@ namespace KXIParse
         private void Statement()
         {
             if (DEBUGMETA) Console.WriteLine("--Statement");
+            if (lastToken.LineNumber == 196)
+            {
+                var x = 7;
+            }
 
             if (Accept(TokenType.BlockBegin))
             {
