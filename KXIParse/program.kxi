@@ -1,22 +1,12 @@
+class Cat
+{
+	unprotected int paws = 4;
+	Cat()
+	{
+	}
+}
 void kxi2015 main() // This is the main function
 {
-	int a = 0;
-	int b = 37;
-	char n = '\n';
-
-	cin >> a;
-	if(a<b)
-	{
-		cout<<a;
-		cout<<'<';
-		cout<<b;
-		cout<<n;
-	}
-	else
-	{
-		cout<<a;
-		cout<<'>';
-		cout<<b;
-		cout<<n;
-	}
+	Cat c = new Cat();
+	cout << c.paws;
 }

@@ -305,7 +305,7 @@ namespace KXIParse
 
                 if (Semanting)
                 {
-                    _semanter.tPush(lastToken.Value);
+                    _semanter.tPush(lastToken.Value, GetScopeString());
                     _semanter.tExist(lastToken.LineNumber);
                 }
 
@@ -517,7 +517,7 @@ namespace KXIParse
             {
                 Expect(TokenType.Type);
                 if (Semanting)
-                    _semanter.tPush(lastToken.Value);
+                    _semanter.tPush(lastToken.Value, GetScopeString());
                 NewDeclaration();
                 
                 return true;
@@ -572,7 +572,7 @@ namespace KXIParse
 
             if (Semanting)
             {
-                _semanter.tPush(lastToken.Value);
+                _semanter.tPush(lastToken.Value, GetScopeString());
                 _semanter.tExist(lastToken.LineNumber);
             }
 
@@ -927,7 +927,7 @@ namespace KXIParse
 
             if (Semanting)
             {
-                _semanter.tPush(lastToken.Value);
+                _semanter.tPush(lastToken.Value, GetScopeString());
                 _semanter.tExist(lastToken.LineNumber);
             }
 

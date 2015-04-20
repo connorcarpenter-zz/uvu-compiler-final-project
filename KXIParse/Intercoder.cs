@@ -56,8 +56,10 @@ namespace KXIParse
 
         public string GetTempVarName(Record r)
         {
-            if(r==null || r.LinkedSymbol.Scope==null || r.LinkedSymbol.Scope.Length==0)
+            if (r == null || r.LinkedSymbol == null || r.LinkedSymbol.Scope == null || r.LinkedSymbol.Scope.Length == 0)
+            {
                 throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
+            }
             var name = "_tmp" + _tempVarNames.Count ;
             _tempVarNames.Push(name);
 

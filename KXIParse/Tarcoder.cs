@@ -186,9 +186,11 @@ namespace KXIParse
                     case "SUB":
                     case "MUL":
                     case "DIV":
+                        ConvertMathInstruction(q);
+                        break;
                     case "AEF":
                     case "REF":
-                        ConvertMathInstruction(q);
+                        ConvertRefInstruction(q);
                         break;
                     case "EQ":
                     case "LT":
@@ -341,7 +343,7 @@ namespace KXIParse
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
                     AddTriad("", "MOV", register1, "FP", "", "");
-                    var offset = "" + (symbol.Offset*-4);
+                    var offset = "" + ((symbol.Offset+2)*-4);
                     AddTriad("", "ADI", register1, offset, "", "");
                     AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
                     RegisterAddSym(register2,symId);
@@ -351,6 +353,25 @@ namespace KXIParse
                     CleanTempRegister(register2);
                     return register2;
                 }
+                case "ivar":
+                {
+                    //don't know what to put here
+                    var register1 = GetEmptyRegister();
+                    var register2 = GetEmptyRegister();
+                    AddTriad("", "MOV", register1, "FP", "", "");
+                    AddTriad("", "ADI", register1, "-8", "", "; the pointer to the THIS pointer on the stack is now in " + register1);
+                    AddTriad("", "LDR", register1, register1, "", "");
+                    var offset = "" + ((symbol.Offset) * 4);
+                    AddTriad("", "ADI", register1, offset, "", "");
+                    AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
+                    RegisterAddSym(register2, symId);
+                    RegisterAddSym(register2, "%inuse%");
+                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
+                    CleanTempRegister(register1);
+                    CleanTempRegister(register2);
+                    return register2;
+                }
+                    break;
                 default:
                     throw new Exception("TCODE: Trying to get location of unknown symbol type");
                     break;
@@ -426,11 +447,24 @@ namespace KXIParse
                     {
                         var register2 = GetEmptyRegister(true);
                         AddTriad("", "MOV", register2, "FP", "", "");
-                        var offset = "" + (symbol.Offset * -4);
+                        var offset = "" + ((symbol.Offset+2) * -4);
                         AddTriad("", "ADI", register2, offset, "", "");
                         AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
                         CleanTempRegister(register2);
                     }
+                        break;
+                    case "ivar":
+                        {
+                            var register2 = GetEmptyRegister(true);
+                            AddTriad("", "MOV", register2, "FP", "", "");
+                            AddTriad("", "ADI", register2, "-8", "", "; the pointer to the THIS pointer on the stack is now in "+register2);
+
+                            AddTriad("", "LDR", register2, register2, "", "; the THIS pointer on the stack is now in " + register2);
+                            var offset = "" + (symbol.Offset * 4);
+                            AddTriad("", "ADI", register2, offset, "", "");
+                            AddTriad("", "STR", register, register2, "", "; " + register + " is now in " + sym);
+                            CleanTempRegister(register2);
+                        }
                         break;
                     case "literal":
                         break;
@@ -467,16 +501,16 @@ namespace KXIParse
 
         private void ConvertNewInstruction(Quad q)
         {
-            var rA = GetRegister(q.Operand1);
-            var rB = q.Operand2;
-            if(q.Operation.Equals("NEW")) rB = GetRegister(q.Operand2);
+            var rA = GetRegister(q.Operand2);
+            var rB = q.Operand1;
+            if(q.Operation.Equals("NEW")) rB = GetRegister(q.Operand1);
             var rC = GetEmptyRegister();
 
             AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
             AddTriad("", "MOV", rA, rC, "", "; save address into "+rA);
             AddTriad("", q.Operation.Equals("NEW") ? "ADD" : "ADI", rC, rB, "", "");
             AddTriad("", "STR", rC, "FREE_HEAP_POINTER", "", "; Update free heap pointer");
-            AddTriad("", q.Operation, rC, rB, "", "");
+            //AddTriad("", q.Operation, rC, rB, "", "");
 
             CleanTempRegister(rC);
         }
@@ -605,6 +639,27 @@ namespace KXIParse
 
             AddTriad("", "MOV", rA, "R0", "", "; Reading user input into "+rA);
         }
+        private void ConvertRefInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand1);
+            var rC = GetRegister(q.Operand3);
+            var rB = GetEmptyRegister();//needs to be the offset of operand2
+
+            AddTriad("", "CMP", rB, rB, "", "");
+            var offset = symbolTable[q.Operand2].Offset;
+            for (var i = 0; i < offset; i++)
+            {
+                AddTriad("", "ADI", rB, "4", "", "");
+            }
+
+            
+            AddTriad("", "MOV", rC, rA, "", "");
+            AddTriad("", "ADD", rC, rB, "", "");
+            AddTriad("", "LDR", rB, "FREE_HEAP_POINTER", "", "; Load address of free heap");
+            AddTriad("", "ADD", rC, rB, "", "");
+            AddTriad("", "LDR", rC, rC, "", string.Format("; ref: {0}'s {1} is now in {2}",rA,rB,rC));
+            CleanTempRegister(rB);
+        }
         private void ConvertMathInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand1);
@@ -622,9 +677,13 @@ namespace KXIParse
         private void ConvertFrameInstruction(Quad q)
         {
             var rA = GetEmptyRegister();
+            var rB = rA;
+            if(q.Operand2!="null")
+                rB = GetRegister(q.Operand2);
+
             //first test for overflow
             AddTriad("","MOV",rA,"SP","","; Settup up activation record for "+q.Operand1+" method");
-            var methodSize = 8+(symbolTable[q.Operand1].Vars*4);
+            var methodSize = ((symbolTable[q.Operand1].Vars+3)*4);
             methodSize *= -1;
             AddTriad("", "ADI", rA, "" + methodSize, "", "; Testing for overflow, this is the size of the method to be called");
             AddTriad("", "CMP", rA, "SL", "", "; Comparing new stack top to stack limit");
@@ -635,6 +694,8 @@ namespace KXIParse
             AddTriad("", "MOV", "FP", "SP", "", "; Point at current activation record ; FP = SP");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust stack pointer for return address");
             AddTriad("", "STR", rA, "SP", "", "; PFP to Top of Stack");
+            AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
+            AddTriad("", "STR", rB, "SP", "", "; this pointer to the top of the stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
             CleanTempRegister(rA);
@@ -653,7 +714,7 @@ namespace KXIParse
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
-            AddTriad("", "JMP", q.Operand1, "", "", "");
+            AddTriad("", "JMP", q.Operand1.ToUpper(), "", "", "");
 
             CleanTempRegister(rA);
         }

@@ -380,7 +380,7 @@ namespace KXIParse
 
         public void iPush(string scope,string iname,int lineNumber) //identifier push
         {
-            var record = new Record(RecordType.Identifier, iname, null);
+            var record = new Record(RecordType.Identifier, iname, new Symbol(){Scope=scope});
             var symbol = GetSymbol(scope, record);
             if (symbol != null)
                 record.LinkedSymbol = symbol;
@@ -543,9 +543,9 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   lPush: " + name);
         }
 
-        public void tPush(string tname)
+        public void tPush(string tname, string scope)
         {
-            _recordStack.Push(new Record(RecordType.Type, tname,null));
+            _recordStack.Push(new Record(RecordType.Type, tname,new Symbol(){Scope=scope}));
             if (DEBUG) Console.WriteLine("   tPush: " + tname);
         }
 
