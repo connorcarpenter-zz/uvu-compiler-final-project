@@ -37,7 +37,8 @@ namespace KXIParse
             New,
             Literal,
             NewArray,
-            Reference
+            Reference,
+            ArrayElement
         }
 
         public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym","void" };
@@ -116,21 +117,29 @@ namespace KXIParse
                     lineNumber, index.LinkedSymbol.Data.Type));
             var typeSar = _recordStack.Pop();
             //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
-            var newSar = new Record(typeSar)
-            {
-                Type = RecordType.NewArray,
-                TempVariable = _intercoder.GetTempVarName(typeSar)
-            };
+            
             
 
             if (arrayInit)
             {
+                var newSar = new Record(typeSar)
+                {
+                    Type = RecordType.NewArray,
+                    TempVariable = _intercoder.GetTempVarName(typeSar)
+                };
+
                 newSar.LinkedSymbol = GetSizeRecord(newSar,lineNumber);
                 _recordStack.Push(newSar);
                 _intercoder.WriteNewArray(index, typeSar, newSar);
             }
             else
             {
+                var newSar = new Record(typeSar)
+                {
+                    Type = RecordType.ArrayElement,
+                    TempVariable = _intercoder.GetTempVarName(typeSar,true)
+                };
+
                 //newSar.LinkedSymbol = GetSizeRecord(newSar);
                 newSar.LinkedSymbol.Data.IsArray = false;
                 _recordStack.Push(newSar);
@@ -428,7 +437,7 @@ namespace KXIParse
                     LinkedSymbol = symbol,
                     Type = RecordType.Identifier
                 };
-                if (identifier.Type == RecordType.NewArray)
+                if (identifier.Type == RecordType.NewArray || identifier.Type == RecordType.ArrayElement)
                 {
                     //what to do here?
                     newSar.LinkedSymbol.Data.IsArray = false;
@@ -664,6 +673,7 @@ namespace KXIParse
                 case RecordType.Literal:
                     return ValueMap[r.Value];
                 case RecordType.NewArray:
+                case RecordType.ArrayElement:
                     return r.Value + "[]";
                 default:
                     return "";
@@ -699,7 +709,7 @@ namespace KXIParse
             _intercoder.AddMethodLabel(symId);
         }
 
-        public void checkVarDuplicates(string name, string scope, int lineNumber)
+        public void checkVarDuplicates(string name,string kind, string scope, int lineNumber)
         {
             var count = 0;
             var scopeList = scope.Split('.');
@@ -708,7 +718,7 @@ namespace KXIParse
                 realScope += "." + scopeList[1];
             foreach (var sym in _symbolTable)
             {
-                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope))
+                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) && !sym.Value.Kind.Equals("param"))
                 {
                     if(!sym.Value.Kind.ToLower().Equals("constructor"))
                         count++;

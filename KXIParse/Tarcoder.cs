@@ -218,9 +218,17 @@ namespace KXIParse
                         }
                         break;
                     case "AEF":
+                        try { 
+                        ConvertArrayRefInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
+                        break;
                     case "REF":
                         try { 
-                        ConvertRefInstruction(q);
+                        ConvertObjRefInstruction(q);
                         }
                         catch (Exception e)
                         {
@@ -852,7 +860,7 @@ namespace KXIParse
 
             AddTriad("", "MOV", rA, "R0", "", "; Reading user input into "+rA);
         }
-        private void ConvertRefInstruction(Quad q)
+        private void ConvertObjRefInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand1);
             var rC = GetRegister(q.Operand3);
@@ -872,6 +880,20 @@ namespace KXIParse
             //AddTriad("", "ADD", rC, rB, "", "");
             AddTriad("", "LDR", rC, rC, "", string.Format("; ref: {0}'s {1} is now in {2}",rA,rB,rC));
             CleanTempRegister(rB);
+        }
+        private void ConvertArrayRefInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand1);
+            var rB = GetRegister(q.Operand2);
+            var rC = GetRegister(q.Operand3);
+            var rD = GetEmptyRegister();
+
+            AddTriad("", "CMP", rD, rD, "", "");
+            AddTriad("", "ADI", rD, "4", "", "");
+            AddTriad("", "MUL", rB, rD, "", "");
+            AddTriad("", "MOV", rC, rA, "", "");
+            AddTriad("", "ADD", rC, rB, "", "");
+            CleanTempRegister(rD);
         }
         private void ConvertMathInstruction(Quad q)
         {

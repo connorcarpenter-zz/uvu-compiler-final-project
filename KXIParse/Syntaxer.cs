@@ -234,7 +234,7 @@ namespace KXIParse
             if (Semanting)
             {
                 //check for duplicate param/ivar names
-                _semanter.checkVarDuplicates(className, GetScopeString(), lastToken.LineNumber);
+                _semanter.checkVarDuplicates(className,"Class", GetScopeString(), lastToken.LineNumber);
             }
 
             Expect(TokenType.BlockBegin);
@@ -404,11 +404,6 @@ namespace KXIParse
                             Value = name
                         });
                 }
-                if (Semanting)
-                {
-                    //check for duplicate param/ivar names
-                    _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
-                }
             }
             else
             {
@@ -451,7 +446,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     //check for duplicate param/ivar names
-                    _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
+                    _semanter.checkVarDuplicates(name,"method", GetScopeString(), lastToken.LineNumber);
                 }
 
                 if (Semanting)
@@ -471,8 +466,7 @@ namespace KXIParse
 
                 if (Syntaxing)
                 {
-                    if(type.Equals("void"))
-                        AddImpliedReturnStatement();
+                    AddImpliedReturnStatement();
                 }
             }
         }
@@ -520,7 +514,7 @@ namespace KXIParse
             if (Semanting)
             {
                 //check for duplicate param/ivar names
-                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
+                _semanter.checkVarDuplicates(name,"Constructor", GetScopeString(), lastToken.LineNumber);
             }
 
             if (Semanting)
@@ -655,7 +649,7 @@ namespace KXIParse
             if(Semanting)
             {
                 //check for duplicate param/ivar names
-                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
+                _semanter.checkVarDuplicates(name,"param", GetScopeString(), lastToken.LineNumber);
             }
         }
 
@@ -1030,7 +1024,7 @@ namespace KXIParse
             if (Semanting)
             {
                 //check for duplicate param/ivar names
-                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
+                _semanter.checkVarDuplicates(name,"lvar", GetScopeString(), lastToken.LineNumber);
             }
         }
 

@@ -54,13 +54,14 @@ namespace KXIParse
             _labelNames = new List<string>();
         }
 
-        public string GetTempVarName(Record r)
+        public string GetTempVarName(Record r,bool isArrayElement = false)
         {
             if (r == null || r.LinkedSymbol == null || r.LinkedSymbol.Scope == null || r.LinkedSymbol.Scope.Length == 0)
             {
                 throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
             }
-            var name = "_tmp" + _tempVarNames.Count ;
+            var name = "_tmp" + _tempVarNames.Count;
+            if (isArrayElement) name = "_atmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
             symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Kind="temp",SymId=name,Value=name});
@@ -248,11 +249,15 @@ namespace KXIParse
                         case Semanter.RecordType.Reference:
                         case Semanter.RecordType.New:
                         case Semanter.RecordType.NewArray:
+                        case Semanter.RecordType.ArrayElement:
                             return r.TempVariable.ToString();
                             break;
                         case Semanter.RecordType.LVar:
                         case Semanter.RecordType.Identifier:
                             if (r.LinkedSymbol.Kind.ToLower().Equals("method") && r.TempVariable != null &&
+                                r.TempVariable.ToString().Length != 0)
+                                return r.TempVariable.ToString();
+                            if (r.LinkedSymbol.Kind.ToLower().Equals("ivar") && r.TempVariable != null &&
                                 r.TempVariable.ToString().Length != 0)
                                 return r.TempVariable.ToString();
                             return r.LinkedSymbol.SymId;
@@ -262,7 +267,7 @@ namespace KXIParse
                     }
                 }
             }
-            if (r.Type == Semanter.RecordType.NewArray)
+            if (r.Type == Semanter.RecordType.NewArray || r.Type == Semanter.RecordType.ArrayElement)
             {
                 return r.TempVariable.ToString();
             }
@@ -372,7 +377,7 @@ namespace KXIParse
             }
             else
             {
-                if(r3.LinkedSymbol!=null)
+                if(!r3.LinkedSymbol.Kind.ToLower().Equals("method"))
                     tempVariable = r3.LinkedSymbol.SymId;
             }
             WriteQuad("","FRAME",r1.LinkedSymbol.SymId,tempVariable,"","function");
@@ -401,7 +406,7 @@ namespace KXIParse
         {
             var firstTemp = GetTempVarName(r1);
             var secondTemp = GetTempVarName(r1);
-            WriteQuad("","MOVI",""+r3.LinkedSymbol.Data.Size,firstTemp,"","array");
+            WriteQuad("","MOVI","4",firstTemp,"","array");
             WriteQuad("", "MUL", firstTemp, ToOperand(r1), secondTemp, "array");
             WriteQuad("","NEW",secondTemp,ToOperand(r3),"","array");
         }
