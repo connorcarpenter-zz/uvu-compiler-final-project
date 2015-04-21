@@ -191,58 +191,59 @@ namespace KXIParse
             return labelTable;
         }
 
-        static List<byte> SecondPass(List<string> input, Dictionary<string, int> symbolTable)
+        private static List<byte> SecondPass(List<string> input, Dictionary<string, int> symbolTable)
         {
             var indexList = new List<string>();
             var mem = new List<byte>();
             foreach (var line in input)
             {
-                var tokens = new List<string>(line.Split(' '));
-                if (symbolTable.ContainsKey(tokens[0]))
+                try
                 {
-                    tokens.RemoveAt(0);
-                }
+                    var tokens = new List<string>(line.Split(' '));
+                    if (symbolTable.ContainsKey(tokens[0]))
+                    {
+                        tokens.RemoveAt(0);
+                    }
 
-                indexList.Add(tokens[0] + " - " + mem.Count());
+                    indexList.Add(tokens[0] + " - " + mem.Count());
 
-                switch (tokens[0])
-                {
-                    case "END":
-                    case "BLK":
-                        mem.Add((byte)opcodeMap[tokens[0]]);
-                        mem.Add(0);
-                        mem.Add(0);
-                        mem.Add(0);
-                        break;
-                    case "JMP":
-                    case "LCK":
-                    case "ULK":
-                        AddLabelInstruction(mem, symbolTable, tokens);
-                        break;
-                    case "JMR":
-                        mem.Add((byte)opcodeMap["JMR"]);
-                        mem.Add((byte)registerMap[tokens[1]]);
-                        mem.Add(0);
-                        mem.Add(0);
-                        break;
-                    case "LDR":
-                        if (registerMap.ContainsKey(tokens[2]))
-                        {
-                            mem.Add((byte)opcodeMap["LDRI"]);
-                            mem.Add((byte)registerMap[tokens[1]]);
-                            mem.Add((byte)registerMap[tokens[2]]);
+                    switch (tokens[0])
+                    {
+                        case "END":
+                        case "BLK":
+                            mem.Add((byte) opcodeMap[tokens[0]]);
                             mem.Add(0);
-                        }
-                        else
-                            if (symbolTable.ContainsKey(tokens[2]))
+                            mem.Add(0);
+                            mem.Add(0);
+                            break;
+                        case "JMP":
+                        case "LCK":
+                        case "ULK":
+                            AddLabelInstruction(mem, symbolTable, tokens);
+                            break;
+                        case "JMR":
+                            mem.Add((byte) opcodeMap["JMR"]);
+                            mem.Add((byte) registerMap[tokens[1]]);
+                            mem.Add(0);
+                            mem.Add(0);
+                            break;
+                        case "LDR":
+                            if (registerMap.ContainsKey(tokens[2]))
+                            {
+                                mem.Add((byte) opcodeMap["LDRI"]);
+                                mem.Add((byte) registerMap[tokens[1]]);
+                                mem.Add((byte) registerMap[tokens[2]]);
+                                mem.Add(0);
+                            }
+                            else if (symbolTable.ContainsKey(tokens[2]))
                             {
                                 AddRegisterLabelInstruction(mem, symbolTable, tokens);
                             }
-                        break;
-                    case ".BYT":
+                            break;
+                        case ".BYT":
                         {
                             var str = tokens[1];
-                            var value = (int)tokens[1][1];
+                            var value = (int) tokens[1][1];
                             str = str.Trim('\'');
                             if (str.Equals("\\s"))
                                 value = 32;
@@ -251,116 +252,119 @@ namespace KXIParse
                             if (str.Equals("\\r"))
                                 value = 13;
 
-                            mem.Add((byte)value);
+                            mem.Add((byte) value);
                         }
-                        break;
-                    case ".INT":
+                            break;
+                        case ".INT":
                         {
                             var value = Convert.ToInt16(tokens[1]);
-                            mem.Add((byte)((value >> 24) & 0xFF));
-                            mem.Add((byte)((value >> 16) & 0xFF));
-                            mem.Add((byte)((value >> 8) & 0xFF));
-                            mem.Add((byte)(value & 0xFF));
+                            mem.Add((byte) ((value >> 24) & 0xFF));
+                            mem.Add((byte) ((value >> 16) & 0xFF));
+                            mem.Add((byte) ((value >> 8) & 0xFF));
+                            mem.Add((byte) (value & 0xFF));
                         }
-                        break;
-                    case "BNZ":
-                    case "BGT":
-                    case "BLT":
-                    case "BRZ":
-                    case "LDA":
-                    case "RUN":
-                        AddRegisterLabelInstruction(mem, symbolTable, tokens);
-                        break;
-                    case "LDB":
-                        if (registerMap.ContainsKey(tokens[2]))
-                        {
-                            mem.Add((byte)opcodeMap["LDBI"]);
-                            mem.Add((byte)registerMap[tokens[1]]);
-                            mem.Add((byte)registerMap[tokens[2]]);
-                            mem.Add(0);
-                        }
-                        else
-                            if (symbolTable.ContainsKey(tokens[2]))
+                            break;
+                        case "BNZ":
+                        case "BGT":
+                        case "BLT":
+                        case "BRZ":
+                        case "LDA":
+                        case "RUN":
+                            AddRegisterLabelInstruction(mem, symbolTable, tokens);
+                            break;
+                        case "LDB":
+                            if (registerMap.ContainsKey(tokens[2]))
+                            {
+                                mem.Add((byte) opcodeMap["LDBI"]);
+                                mem.Add((byte) registerMap[tokens[1]]);
+                                mem.Add((byte) registerMap[tokens[2]]);
+                                mem.Add(0);
+                            }
+                            else if (symbolTable.ContainsKey(tokens[2]))
                             {
                                 AddRegisterLabelInstruction(mem, symbolTable, tokens);
                             }
-                        break;
-                    case "STB":
-                        if (registerMap.ContainsKey(tokens[2]))
-                        {
-                            mem.Add((byte)opcodeMap["STBI"]);
-                            mem.Add((byte)registerMap[tokens[1]]);
-                            mem.Add((byte)registerMap[tokens[2]]);
-                            mem.Add(0);
-                        }
-                        else
-                            if (symbolTable.ContainsKey(tokens[2]))
+                            break;
+                        case "STB":
+                            if (registerMap.ContainsKey(tokens[2]))
+                            {
+                                mem.Add((byte) opcodeMap["STBI"]);
+                                mem.Add((byte) registerMap[tokens[1]]);
+                                mem.Add((byte) registerMap[tokens[2]]);
+                                mem.Add(0);
+                            }
+                            else if (symbolTable.ContainsKey(tokens[2]))
                             {
                                 AddRegisterLabelInstruction(mem, symbolTable, tokens);
                             }
-                        break;
-                    case "STR":
-                        if (registerMap.ContainsKey(tokens[2]))
-                        {
-                            mem.Add((byte)opcodeMap["STRI"]);
-                            mem.Add((byte)registerMap[tokens[1]]);
-                            mem.Add((byte)registerMap[tokens[2]]);
-                            mem.Add(0);
-                        }
-                        else
-                            if (symbolTable.ContainsKey(tokens[2]))
+                            break;
+                        case "STR":
+                            if (registerMap.ContainsKey(tokens[2]))
+                            {
+                                mem.Add((byte) opcodeMap["STRI"]);
+                                mem.Add((byte) registerMap[tokens[1]]);
+                                mem.Add((byte) registerMap[tokens[2]]);
+                                mem.Add(0);
+                            }
+                            else if (symbolTable.ContainsKey(tokens[2]))
                             {
                                 AddRegisterLabelInstruction(mem, symbolTable, tokens);
                             }
-                        break;
-                    case "MOV":
-                    case "ADD":
-                    case "SUB":
-                    case "MUL":
-                    case "DIV":
-                    case "OR":
-                    case "AND":
-                    case "CMP":
-                        AddRegisterRegisterInstruction(mem, symbolTable, tokens);
-                        break;
-                    case "ADI":
+                            break;
+                        case "MOV":
+                        case "ADD":
+                        case "SUB":
+                        case "MUL":
+                        case "DIV":
+                        case "OR":
+                        case "AND":
+                        case "CMP":
+                            AddRegisterRegisterInstruction(mem, symbolTable, tokens);
+                            break;
+                        case "ADI":
                         {
-                            mem.Add((byte)opcodeMap[tokens[0]]);
-                            mem.Add((byte)registerMap[tokens[1]]);
+                            mem.Add((byte) opcodeMap[tokens[0]]);
+                            mem.Add((byte) registerMap[tokens[1]]);
                             int i = Convert.ToInt16(tokens[2]);
                             if (i >= 0)
                             {
-                                mem.Add((byte)i);
+                                mem.Add((byte) i);
                                 mem.Add(0);
                             }
                             else
                             {
                                 i = Math.Abs(i);
-                                mem.Add((byte)i);
+                                mem.Add((byte) i);
                                 mem.Add(1);
                             }
                         }
-                        break;
-                    case "TRP":
+                            break;
+                        case "TRP":
                         {
-                            mem.Add((byte)opcodeMap[tokens[0]]);
+                            mem.Add((byte) opcodeMap[tokens[0]]);
                             int i = Convert.ToInt16(tokens[1]);
-                            mem.Add((byte)i);
+                            mem.Add((byte) i);
                             mem.Add(0);
                             mem.Add(0);
                         }
-                        break;
-                    case "NOOP":
-                        mem.Add(0);
-                        break;
-                    default:
-                        if (DEBUG)
-                            Console.WriteLine(string.Format("Error: {0} opcode is not recognized", tokens[0]));
-                        break;
+                            break;
+                        case "NOOP":
+                            mem.Add(0);
+                            break;
+                        default:
+                            if (DEBUG)
+                                Console.WriteLine(string.Format("Error: {0} opcode is not recognized", tokens[0]));
+                            break;
+                    }
                 }
-            };
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
             return mem;
         }
+
         static void AddLabelInstruction(List<byte> mem, Dictionary<string, int> symbolTable, List<string> tokens)
         {
             mem.Add((byte)opcodeMap[tokens[0]]);

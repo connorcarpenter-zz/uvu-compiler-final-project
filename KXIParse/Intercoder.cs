@@ -181,6 +181,7 @@ namespace KXIParse
                             break;
                         case "method":
                             WriteQuad("", "MOV", "R0", "R0", "", "empty");
+                            WriteQuad(label, "", "", "", "OPENLABELSLOT", "method");
                             break;
                         default:
                             throw new Exception("Really don't think there should be backpatching outside an if or while");
@@ -201,6 +202,12 @@ namespace KXIParse
 
         private void LabelBackPatch(string oldLabel, string newLabel)
         {
+            //check if label is a method
+            if (symbolTable.ContainsKey(oldLabel.ToLower()) && symbolTable[oldLabel.ToLower()].Kind.ToLower().Equals("method"))
+            {
+                WriteQuad("","MOV","R0","R0","","empty");
+                return;
+            }
             foreach (var q in IntercodeList)
             {
                 if (q.Label != null && q.Label.Equals(oldLabel))
