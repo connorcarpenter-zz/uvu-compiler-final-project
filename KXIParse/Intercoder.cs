@@ -151,7 +151,7 @@ namespace KXIParse
 
         private void WriteQuad(string label, string op0, string op1, string op2, string op3,string action)
         {
-            if (op0.Equals("RETURN") && op1.StartsWith("_met"))
+            if (op0.Equals("BF") && op1.StartsWith("first"))
             {
                 var x = 5;
             }
@@ -262,8 +262,29 @@ namespace KXIParse
 
         public void WriteIf(Record expressionSar)
         {
-            var op1 = expressionSar.Value;
+            var op1 = GetExpressionOp(expressionSar);
             WriteQuad("", "BF", op1, GetLabelName("SkipIf"),"", "if");
+        }
+
+        private string GetExpressionOp(Record expressionSar)
+        {
+            var op1 = "";
+            switch (expressionSar.Type)
+            {
+                case Semanter.RecordType.Temporary:
+                    op1 = expressionSar.Value;
+                    break;
+                case Semanter.RecordType.Identifier:
+                    if (expressionSar.LinkedSymbol != null)
+                        op1 = expressionSar.LinkedSymbol.SymId;
+                    break;
+                case Semanter.RecordType.Reference:
+                    op1 = expressionSar.TempVariable.ToString();
+                    break;
+            }
+            if (op1.Length == 0)
+                throw new Exception("ICODE Error: Trying to make expression instruction for unimplemented type");
+            return op1;
         }
 
         public void WriteSkipIf(bool isElse)
@@ -287,7 +308,7 @@ namespace KXIParse
 
         public void WriteMiddleWhile(Record expressionSar)
         {
-            var op1 = expressionSar.Value;
+            var op1 = GetExpressionOp(expressionSar);
             WriteQuad("", "BF", op1, GetLabelName("EndWhile"), "", "while");
         }
 

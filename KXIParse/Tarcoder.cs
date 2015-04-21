@@ -503,7 +503,8 @@ namespace KXIParse
         private void LastUsedRegister(string register)
         {
             lastUsedRegister.RemoveAll(s => s.Equals(register));
-            lastUsedRegister.Add(register);
+            if(register!="R0")
+                lastUsedRegister.Add(register);
         }
         private void RegisterAddSym(string register, string symId)
         {
