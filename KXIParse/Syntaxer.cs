@@ -819,7 +819,7 @@ namespace KXIParse
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
                     _semanter.func();
-                    if (!Peek(TokenType.Semicolon))
+                    if (Peek(TokenType.Semicolon))
                     {
                         var x = 5;
                         //this used to be where funcPeek was

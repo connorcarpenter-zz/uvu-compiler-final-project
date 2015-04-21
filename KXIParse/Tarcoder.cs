@@ -260,64 +260,133 @@ namespace KXIParse
                         }
                         break;
                     case "READ":
-                        ConvertReadInstruction(q);
+                        try
+                        {
+                            ConvertReadInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "FRAME":
+                        try { 
                         ConvertFrameInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "CALL":
-                        DeallocAllRegisters();
-                        ConvertCallInstruction(q);
+                        try { 
+                            DeallocAllRegisters();
+                            ConvertCallInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "RTN":
                     case "RETURN":
-                        DeallocAllRegisters();
-                        ConvertRtnInstruction(q);
+                        try
+                        {
+                            DeallocAllRegisters();
+                            ConvertRtnInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "END":
-                        AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
+                        try { 
+                            AddTriad("END_PROGRAM", "TRP", "0", "", "", "");
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "BF":
-                    {
-                        DeallocAllRegisters();
-                        var rA = GetRegister(q.Operand1);
-                        AddTriad("", "BRZ", rA, q.Operand2, "", "; if "+rA+" == FALSE, GOTO " + q.Operand2);
-                    }
+                        try
+                        {
+                            DeallocAllRegisters();
+                            var rA = GetRegister(q.Operand1);
+                            AddTriad("", "BRZ", rA, q.Operand2, "", "; if "+rA+" == FALSE, GOTO " +q.Operand2);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "BT":
-                    {
-                        DeallocAllRegisters();
-                        var rA = GetRegister(q.Operand1);
-                        AddTriad("", "BNZ", rA, q.Operand2, "", "; if " + rA + " == TRUE, GOTO " + q.Operand2);
-                    }
+                        try
+                        {
+                            DeallocAllRegisters();
+                            var rA = GetRegister(q.Operand1);
+                            AddTriad("", "BNZ", rA, q.Operand2, "", "; if " + rA + " == TRUE, GOTO " + q.Operand2);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "JMP":
-                        DeallocAllRegisters();
-                        AddTriad("","JMP",q.Operand1,"","","; GOTO "+q.Operand1);
+                        try { 
+                            DeallocAllRegisters();
+                            AddTriad("","JMP",q.Operand1,"","","; GOTO "+q.Operand1);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "PUSH":
+                        try
                         {
                             var rA = GetRegister(q.Operand1);
                             AddTriad("", "STR", rA, "SP", "", string.Format("; Push {0} on the stack; {0} is in {1}",q.Operand1,rA));
                             AddTriad("", "ADI", "SP", "-4", "", "");
                         }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "POP":
+                        try
                         {
                             var rA = GetRegister(q.Operand1);
                             AddTriad("", "ADI", "SP", "4", "", "");
                             AddTriad("", "LDR", rA, "SP", "", string.Format("; Pop top of stack into {0} ({1})", q.Operand1, rA));
                         }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "PEEK":
+                        try
                         {
                             var rA = GetRegister(q.Operand1);
                             AddTriad("", "LDR", rA, "SP", "", string.Format("; Peek the stack into {0} ({1})", q.Operand1, rA));
                         }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "NEW":
                     case "NEWI":
-                        ConvertNewInstruction(q);
+                        try { 
+                            ConvertNewInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     default:
                         throw new Exception("TCODE: Can't process unimplemented ICODE instruction");
