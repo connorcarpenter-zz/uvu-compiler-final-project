@@ -151,6 +151,11 @@ namespace KXIParse
 
         private void WriteQuad(string label, string op0, string op1, string op2, string op3,string action)
         {
+            if (op1.Equals("_met0") && op2.Equals("_met0"))
+            {
+                var x = 5;
+            }
+
             var laster = IntercodeList.LastOrDefault();
             if(laster!=null && (laster.Operand3!=null && laster.Operand3.Equals("OPENLABELSLOT")))
             {
@@ -343,6 +348,7 @@ namespace KXIParse
         {
             var tempVar = GetTempVarName(r);
             WriteQuad("", "PEEK", tempVar, "", "", "function");
+            r.TempVariable = tempVar;
             //_tempVarNames.Pop();
         }
 
