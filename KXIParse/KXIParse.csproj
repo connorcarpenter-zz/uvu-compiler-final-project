@@ -55,6 +55,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="DemoA.kxi" />
+    <None Include="program - Copy.kxi" />
     <None Include="program.kxi" />
   </ItemGroup>
   <ItemGroup>

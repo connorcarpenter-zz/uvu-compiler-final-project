@@ -231,6 +231,11 @@ namespace KXIParse
                         Vars = 0
                     });
             }
+            if (Semanting)
+            {
+                //check for duplicate param/ivar names
+                _semanter.checkVarDuplicates(className, GetScopeString(), lastToken.LineNumber);
+            }
 
             Expect(TokenType.BlockBegin);
 
@@ -399,6 +404,11 @@ namespace KXIParse
                             Value = name
                         });
                 }
+                if (Semanting)
+                {
+                    //check for duplicate param/ivar names
+                    _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
+                }
             }
             else
             {
@@ -437,6 +447,11 @@ namespace KXIParse
                                 Params = paramList
                             }
                         });
+                }
+                if (Semanting)
+                {
+                    //check for duplicate param/ivar names
+                    _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
                 }
 
                 if (Semanting)
@@ -495,6 +510,11 @@ namespace KXIParse
                         Value = name,
                         Vars = 0
                     });
+            }
+            if (Semanting)
+            {
+                //check for duplicate param/ivar names
+                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
             }
 
             if (Semanting)
@@ -625,6 +645,11 @@ namespace KXIParse
                     });
                 if (paramList != null)
                     paramList.Add(symId);
+            }
+            if(Semanting)
+            {
+                //check for duplicate param/ivar names
+                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
             }
         }
 
@@ -995,6 +1020,11 @@ namespace KXIParse
                         SymId = symId,
                         Value = name
                     });
+            }
+            if (Semanting)
+            {
+                //check for duplicate param/ivar names
+                _semanter.checkVarDuplicates(name, GetScopeString(), lastToken.LineNumber);
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 
 namespace KXIParse
@@ -696,6 +697,25 @@ namespace KXIParse
         public void AddMethodLabel(string symId)
         {
             _intercoder.AddMethodLabel(symId);
+        }
+
+        public void checkVarDuplicates(string name, string scope, int lineNumber)
+        {
+            var count = 0;
+            var scopeList = scope.Split('.');
+            var realScope = scopeList[0];
+            if (scopeList.Count() > 1)
+                realScope += "." + scopeList[1];
+            foreach (var sym in _symbolTable)
+            {
+                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope))
+                {
+                    if(!sym.Value.Kind.ToLower().Equals("constructor"))
+                        count++;
+                    if(count>1)
+                        throw new Exception("Semantic Error at Line "+lineNumber+": More than one symbols with the name \""+name+"\" in this scope.");
+                }
+            }
         }
     }
 
