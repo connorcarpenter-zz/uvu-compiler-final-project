@@ -158,10 +158,25 @@ namespace KXIParse
 
             foreach (var sym in symbolTable.Where(sym => sym.Value.Kind == "literal"))
             {
-                if(sym.Value.Data.Type.Equals("Number") || sym.Value.Data.Type.Equals("Boolean"))
+                if (sym.Value.Data.Type.Equals("Number"))
                     AddTriad(sym.Key,".INT",sym.Value.Value,"","","");
-                if (sym.Value.Data.Type.Equals("Character"))
+                else if (sym.Value.Data.Type.Equals("Boolean"))
+                    AddTriad(sym.Key, ".INT", sym.Value.Value.Equals("true") ? "1" : "0", "", "", "");
+                else if (sym.Value.Data.Type.Equals("True"))
+                    AddTriad(sym.Key, ".INT", "1", "", "", "");
+                else if (sym.Value.Data.Type.Equals("False") || sym.Value.Data.Type.Equals("Null"))
+                    AddTriad(sym.Key, ".INT", "0", "", "", "");
+                else if (sym.Value.Data.Type.Equals("Character"))
                     AddTriad(sym.Key, ".BYT", sym.Value.Value, "", "", "");
+                else
+                {
+                    if (IsClass(sym.Value.Data.Type))
+                    {
+                        AddTriad(sym.Key, ".INT", "0", "", "", "");
+                    }
+                    else
+                    throw new Exception("TCODE: Trying to add unknown symbol type to literal list");
+                }
             }
             
             AddTriad("FREE_HEAP_POINTER", ".INT", "0", "", "", "");
@@ -169,6 +184,12 @@ namespace KXIParse
             AddTriad("HEAP_SIZE", ".INT", Convert.ToString(heapSize), "", "", "");
             AddTriad("HEAP_START", "NOOP", "", "", "", "");
         }
+
+        private bool IsClass(string type)
+        {
+            return symbolTable.Any(sym => sym.Value.Kind.Equals("Class") && sym.Value.Value.Equals(type));
+        }
+
         private void Start()
         {
             AddTriad("", "", "", "", "", "; Main Program");
