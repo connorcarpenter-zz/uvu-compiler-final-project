@@ -151,7 +151,7 @@ namespace KXIParse
 
         private void WriteQuad(string label, string op0, string op1, string op2, string op3,string action)
         {
-            if (op1.Equals("_met0") && op2.Equals("_met0"))
+            if (op0.Equals("RETURN") && op1.StartsWith("_met"))
             {
                 var x = 5;
             }
@@ -243,6 +243,9 @@ namespace KXIParse
                             break;
                         case Semanter.RecordType.LVar:
                         case Semanter.RecordType.Identifier:
+                            if (r.LinkedSymbol.Kind.ToLower().Equals("method") && r.TempVariable != null &&
+                                r.TempVariable.ToString().Length != 0)
+                                return r.TempVariable.ToString();
                             return r.LinkedSymbol.SymId;
                             break;
                         default:

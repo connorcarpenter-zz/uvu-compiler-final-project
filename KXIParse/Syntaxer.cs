@@ -820,7 +820,11 @@ namespace KXIParse
                     _semanter.EAL();
                     _semanter.func();
                     if (!Peek(TokenType.Semicolon))
-                        _semanter.funcPeek();
+                    {
+                        var x = 5;
+                        //this used to be where funcPeek was
+                    }
+                    _semanter.funcPeek();
                 }
             }
         }

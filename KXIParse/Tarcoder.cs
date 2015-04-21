@@ -182,15 +182,29 @@ namespace KXIParse
                 }
                 switch (q.Operation)
                 {
+                        
                     case "ADD":
                     case "SUB":
                     case "MUL":
                     case "DIV":
-                        ConvertMathInstruction(q);
+                        try
+                        {
+                            ConvertMathInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "AEF":
                     case "REF":
+                        try { 
                         ConvertRefInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "EQ":
                     case "LT":
@@ -198,24 +212,52 @@ namespace KXIParse
                     case "NE":
                     case "LE":
                     case "GE":
+                        try { 
                         ConvertBoolInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "AND":
                     case "OR":
+                        try { 
                         ConvertLogicInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "MOV":
+                        try { 
                         ConvertMoveInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "MOVI":
-                    {
+                        try{
                         var rA = GetRegister(q.Operand2);
                         AddTriad("", "SUB", rA, rA, "", string.Format("; move {0} into {1}", q.Operand1, rA));
                         AddTriad("", "ADI", rA, q.Operand1, "", "");
-                    }
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "WRITE":
+                        try { 
                         ConvertWriteInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
                         break;
                     case "READ":
                         ConvertReadInstruction(q);
@@ -598,10 +640,19 @@ namespace KXIParse
         }
         private void ConvertMoveInstruction(Quad q)
         {
-            var rA = GetRegister(q.Operand1);
-            var rB = GetRegister(q.Operand2);
+            if (q.Operation.Equals("MOV") && q.Operand1.Equals("R0") && q.Operand2.Equals("R0"))
+            {
+                //empty statement (wasn't sure if NOOP still works...)
+                //for double labels :/
+                AddTriad("", "MOV", "R0", "R0", "", "");
+            }
+            else
+            {
+                var rA = GetRegister(q.Operand1);
+                var rB = GetRegister(q.Operand2);
 
-            AddTriad("", "MOV", rB, rA, "", "");
+                AddTriad("", "MOV", rB, rA, "", "");
+            }
         }
         private void ConvertWriteInstruction(Quad q)
         {
