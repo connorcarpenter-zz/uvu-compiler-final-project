@@ -367,7 +367,14 @@ namespace KXIParse
         {
             var tempVariable = "this";
             if (!isThis)
+            {
                 tempVariable = r4.TempVariable.ToString();
+            }
+            else
+            {
+                if(r3.LinkedSymbol!=null)
+                    tempVariable = r3.LinkedSymbol.SymId;
+            }
             WriteQuad("","FRAME",r1.LinkedSymbol.SymId,tempVariable,"","function");
             if (r2.ArgumentList != null && r2.ArgumentList.Count > 0)
             {
@@ -402,7 +409,7 @@ namespace KXIParse
         public void WriteNewObj(Record r1,Record r2)
         {
             var newTemp = GetTempVarName(r1);
-            WriteQuad("", "NEWI", ""+r1.LinkedSymbol.Data.Size, newTemp,"", "newobj");
+            WriteQuad("", "NEWI", ""+r2.LinkedSymbol.SymId, newTemp,"", "newobj");
             WriteQuad("", "FRAME", r1.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
             {

@@ -402,9 +402,17 @@ namespace KXIParse
                         }
                         break;
                     case "NEW":
+                        try { 
+                            ConvertNewArrayInstruction(q);
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
+                        }
+                        break;
                     case "NEWI":
                         try { 
-                            ConvertNewInstruction(q);
+                            ConvertNewObjInstruction(q);
                         }
                         catch (Exception e)
                         {
@@ -664,21 +672,35 @@ namespace KXIParse
             return "COMPARE" + compareLabels;
         }
 
-        private void ConvertNewInstruction(Quad q)
+        private void ConvertNewObjInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand2);
-            var rB = q.Operand1;
-            if(q.Operation.Equals("NEW")) rB = GetRegister(q.Operand1);
-            else
-            {
-                if (Math.Abs(Convert.ToInt16(q.Operand1)) > 127)
-                    throw new Exception("Tarcode error: Trying to put too much data into an ADI command");
-            }
             var rC = GetEmptyRegister();
 
             AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
-            AddTriad("", "MOV", rA, rC, "", "; save address into "+rA);
-            AddTriad("", q.Operation.Equals("NEW") ? "ADD" : "ADI", rC, rB, "", "");
+            AddTriad("", "MOV", rA, rC, "", "; save address into " + rA);
+            var offset = (symbolTable[q.Operand1].Vars * 4);
+            while (Math.Abs(offset) > 64)
+            {
+                AddTriad("", "ADI", rC, (Math.Sign(offset) * 64).ToString(), "", "");
+                offset -= Math.Sign(offset) * 64;
+            }
+            AddTriad("", "ADI", rC, offset.ToString(), "", "; freein up space on the stack");
+
+            AddTriad("", "STR", rC, "FREE_HEAP_POINTER", "", "; Update free heap pointer");
+            //AddTriad("", q.Operation, rC, rB, "", "");
+
+            CleanTempRegister(rC);
+        }
+        private void ConvertNewArrayInstruction(Quad q)
+        {
+            var rA = GetRegister(q.Operand2);
+            var rB = GetRegister(q.Operand1);
+            var rC = GetEmptyRegister();
+
+            AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
+            AddTriad("", "MOV", rA, rC, "", "; save address into " + rA);
+            AddTriad("", "ADD", rC, rB, "", "");
             AddTriad("", "STR", rC, "FREE_HEAP_POINTER", "", "; Update free heap pointer");
             //AddTriad("", q.Operation, rC, rB, "", "");
 

@@ -468,6 +468,12 @@ namespace KXIParse
 
                 //leave
                 outScope(name);
+
+                if (Syntaxing)
+                {
+                    if(type.Equals("void"))
+                        AddImpliedReturnStatement();
+                }
             }
         }
 
