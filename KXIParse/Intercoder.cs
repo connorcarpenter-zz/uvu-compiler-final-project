@@ -206,6 +206,8 @@ namespace KXIParse
             if (symbolTable.ContainsKey(oldLabel.ToLower()) && symbolTable[oldLabel.ToLower()].Kind.ToLower().Equals("method"))
             {
                 WriteQuad("","MOV","R0","R0","","empty");
+                WriteQuad(newLabel, "", "", "", "OPENLABELSLOT", "while");
+                
                 return;
             }
             foreach (var q in IntercodeList)

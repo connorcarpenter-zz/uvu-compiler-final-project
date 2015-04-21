@@ -243,6 +243,8 @@ namespace KXIParse
                         try{
                         var rA = GetRegister(q.Operand2);
                         AddTriad("", "SUB", rA, rA, "", string.Format("; move {0} into {1}", q.Operand1, rA));
+                        if(Math.Abs(Convert.ToInt16(q.Operand1))>127)
+                            throw new Exception("Tarcode error: Trying to put too much data into an ADI command");
                         AddTriad("", "ADI", rA, q.Operand1, "", "");
                         }
                         catch (Exception e)
@@ -451,8 +453,14 @@ namespace KXIParse
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
                     AddTriad("", "MOV", register1, "FP", "", "");
-                    var offset = "" + ((symbol.Offset+2)*-4);
-                    AddTriad("", "ADI", register1, offset, "", "");
+                    var offset = (symbol.Offset+2)*-4;
+                    while (Math.Abs(offset) > 64)
+                    {
+                        AddTriad("", "ADI", register1, (Math.Sign(offset) * 64).ToString(), "", "");
+                        offset -= Math.Sign(offset) * 64;
+                    }
+                    AddTriad("", "ADI", register1, offset.ToString(), "", "; freein up space on the stack");
+                    
                     AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
                     RegisterAddSym(register2,symId);
                     RegisterAddSym(register2, "%inuse%");
@@ -469,8 +477,18 @@ namespace KXIParse
                     AddTriad("", "MOV", register1, "FP", "", "");
                     AddTriad("", "ADI", register1, "-8", "", "");
                     AddTriad("", "LDR", register1, register1, "", "; the pointer to the THIS pointer on the stack is now in " + register1);
-                    var offset = "" + ((symbol.Offset-1) * 4);
-                    AddTriad("", "ADI", register1, offset, "", "");
+
+                    var offset = (symbol.Offset -1)*4;
+                    if (offset != 0)
+                    {
+                        while (Math.Abs(offset) > 64)
+                        {
+                            AddTriad("", "ADI", register1, (Math.Sign(offset) * 64).ToString(), "", "");
+                            offset -= Math.Sign(offset) * 64;
+                        }
+                        AddTriad("", "ADI", register1, offset.ToString(), "", "; freein up space on the stack");
+                    }
+
                     AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
                     RegisterAddSym(register2, symId);
                     RegisterAddSym(register2, "%inuse%");
@@ -557,8 +575,15 @@ namespace KXIParse
                     {
                         var register2 = GetEmptyRegister(true);
                         AddTriad("", "MOV", register2, "FP", "", "");
-                        var offset = "" + ((symbol.Offset+2) * -4);
-                        AddTriad("", "ADI", register2, offset, "", "");
+                        var offset = (symbol.Offset + 2)*-4;
+
+                        while (Math.Abs(offset) > 64)
+                        {
+                            AddTriad("", "ADI", register2, (Math.Sign(offset) * 64).ToString(), "", "");
+                            offset -= Math.Sign(offset) * 64;
+                        }
+                        AddTriad("", "ADI", register2, offset.ToString(), "", "; freein up space on the stack");
+
                         AddTriad("", "STR", register, register2, "", "; "+register+" is now in "+sym);
                         CleanTempRegister(register2);
                     }
@@ -570,8 +595,17 @@ namespace KXIParse
                             AddTriad("", "ADI", register2, "-8", "", "; the pointer to the THIS pointer on the stack is now in "+register2);
 
                             AddTriad("", "LDR", register2, register2, "", "; the THIS pointer on the stack is now in " + register2);
-                            var offset = "" + ((symbol.Offset-1) * 4);
-                            AddTriad("", "ADI", register2, offset, "", "");
+                            var offset = (symbol.Offset - 1)*4;
+                            if (offset != 0)
+                            {
+                                while (Math.Abs(offset) > 64)
+                                {
+                                    AddTriad("", "ADI", register2, (Math.Sign(offset) * 64).ToString(), "", "");
+                                    offset -= Math.Sign(offset) * 64;
+                                }
+                                AddTriad("", "ADI", register2, offset.ToString(), "", "; freein up space on the stack");
+                            }
+
                             AddTriad("", "STR", register, register2, "", "; " + register + " is now in " + sym);
                             CleanTempRegister(register2);
                         }
@@ -614,6 +648,11 @@ namespace KXIParse
             var rA = GetRegister(q.Operand2);
             var rB = q.Operand1;
             if(q.Operation.Equals("NEW")) rB = GetRegister(q.Operand1);
+            else
+            {
+                if (Math.Abs(Convert.ToInt16(q.Operand1)) > 127)
+                    throw new Exception("Tarcode error: Trying to put too much data into an ADI command");
+            }
             var rC = GetEmptyRegister();
 
             AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
@@ -819,10 +858,14 @@ namespace KXIParse
             }
 
             //first test for overflow
-            AddTriad("","MOV",rA,"SP","","; Settup up activation record for "+q.Operand1+" method");
-            var methodSize = ((symbolTable[q.Operand1].Vars+3)*4);
-            methodSize *= -1;
-            AddTriad("", "ADI", rA, "" + methodSize, "", "; Testing for overflow, this is the size of the method to be called");
+            AddTriad("","MOV",rA,"SP","","; Setup up activation record for "+q.Operand1+" method, testing for overflow");
+            var methodSize = (symbolTable[q.Operand1].Vars+3)*-4;
+            while (Math.Abs(methodSize)>64)
+            {
+                AddTriad("", "ADI", rA, (Math.Sign(methodSize)*64).ToString(), "", "");
+                methodSize-=Math.Sign(methodSize)*64;
+            }
+            AddTriad("", "ADI", rA, methodSize.ToString(), "", "");
             AddTriad("", "CMP", rA, "SL", "", "; Comparing new stack top to stack limit");
             AddTriad("", "BLT", rA, "OVERFLOW", "", "");
             
@@ -847,9 +890,13 @@ namespace KXIParse
             var methodSize = symbolTable[q.Operand1].Vars;
             if(symbolTable[q.Operand1].Data!=null && symbolTable[q.Operand1].Data.Params!=null)
                 methodSize -= symbolTable[q.Operand1].Data.Params.Count;
-            for(int i=0;i<methodSize;i++)
-                AddTriad("", "ADI", "SP","-4", "", "; Freein up space on stack");
-
+            methodSize *= -4;
+            while (Math.Abs(methodSize) > 64)
+            {
+                AddTriad("", "ADI", rA, (Math.Sign(methodSize) * 64).ToString(), "", "");
+                methodSize -= Math.Sign(methodSize) * 64;
+            }
+            AddTriad("", "ADI", "SP", methodSize.ToString(), "", "; Freein up space on stack");
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");

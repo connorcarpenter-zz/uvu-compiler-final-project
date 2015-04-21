@@ -326,6 +326,8 @@ namespace KXIParse
                             mem.Add((byte) opcodeMap[tokens[0]]);
                             mem.Add((byte) registerMap[tokens[1]]);
                             int i = Convert.ToInt16(tokens[2]);
+                            if (Math.Abs(i) > 127)
+                                throw new Exception("VM: Too much data to store in ADI command");
                             if (i >= 0)
                             {
                                 mem.Add((byte) i);
@@ -591,6 +593,8 @@ namespace KXIParse
                     case "STR":
                         {
                             var value = GetReg(op1);
+                            while(mem.Count()<=label+3)
+                                mem.Add(0);
                             mem[label] = (byte)((value >> 24) & 0xFF);
                             mem[label + 1] = (byte)((value >> 16) & 0xFF);
                             mem[label + 2] = (byte)((value >> 8) & 0xFF);
@@ -601,11 +605,8 @@ namespace KXIParse
                         {
                             var value = GetReg(op1);
                             var address = GetReg(op2);
-                            if (address + 3 >= mem.Count())
-                            {
-                                for (int i = mem.Count(); i <= address + 3; i++)
-                                    mem.Add(0);
-                            }
+                            while (mem.Count() <= address + 3)
+                                mem.Add(0);
                             mem[address] = (byte)((value >> 24) & 0xFF);
                             mem[address + 1] = (byte)((value >> 16) & 0xFF);
                             mem[address + 2] = (byte)((value >> 8) & 0xFF);
@@ -635,6 +636,8 @@ namespace KXIParse
                     case "STB":
                         {
                             var value = GetReg(op1);
+                            while (mem.Count() <= label)
+                                mem.Add(0);
                             mem[label] = (byte)(value & 0xFF);
                         }
                         break;
@@ -642,15 +645,29 @@ namespace KXIParse
                         {
                             var value = GetReg(op1);
                             var address = GetReg(op2);
+                            while (mem.Count() <= address)
+                                mem.Add(0);
                             mem[address] = (byte)(value & 0xFF);
                         }
                         break;
                     case "LDB":
+                        if (label >= mem.Count())
+                        {
+                            if (DEBUG)
+                                Console.WriteLine("Attempting to LDB outside of memory...");
+                            break;
+                        }
                         SetReg(op1, mem[label]);
                         break;
                     case "LDBI":
                         {
                             var address = GetReg(op2);
+                            if (address >= mem.Count())
+                            {
+                                if (DEBUG)
+                                    Console.WriteLine("Attempting to LDBI outside of memory...");
+                                break;
+                            }
                             SetReg(op1, mem[address]);
                         }
                         break;
