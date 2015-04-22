@@ -5,11 +5,17 @@ namespace KXIParse
 {
     class Program
     {
-        static void Main()
+        private const bool DEBUG = true;
+        static void Main(string[] args)
         {
             try
             {
-                var lexer = new Lexer("../../program.kxi");
+                Lexer lexer;
+                
+                if(DEBUG)
+                    lexer = new Lexer("../../program.kxi");
+                else
+                    lexer = new Lexer(args[0]);
                 var tokens = lexer.GenerateTokens();
                 if (false)
                 {

@@ -201,6 +201,8 @@ void kxi2015 main() {
 
     bff.nest();
 
+msg.msg2('k');
+
     msg.msg3();
 
 	cin >> key;
