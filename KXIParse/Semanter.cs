@@ -205,7 +205,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   #]");
         }
 
-        public void func(string scope) //function
+        public void func(string scope,int lineNumber) //function
         {
             var argumentList = _recordStack.Pop();
             var functionName = _recordStack.Pop();
@@ -222,13 +222,37 @@ namespace KXIParse
                 newRecord.LinkedSymbol.SymId.Length == 0)
             {
                 var symbol = (from s in _symbolTable
-                              where s.Value.Scope == "g." + peekRecord.LinkedSymbol.Data.Type &&
-                                  s.Value.Value == functionName.Value &&
-                                  s.Value.Data.AccessMod.Equals("unprotected") &&
-                                  s.Value.Kind.ToLower().Equals("method")
-                              select s.Value).FirstOrDefault();
+                    where s.Value.Scope == "g." + peekRecord.LinkedSymbol.Data.Type &&
+                          s.Value.Value == functionName.Value &&
+                          s.Value.Data.AccessMod.Equals("unprotected") &&
+                          s.Value.Kind.ToLower().Equals("method")
+                    select s.Value).FirstOrDefault();
                 newRecord.LinkedSymbol = symbol;
             }
+            if(newRecord.LinkedSymbol != null)
+            {
+            //test arguments
+                var oldStack = new Stack<Record>(argumentList.ArgumentList);
+                if (newRecord.LinkedSymbol != null)
+                    foreach (var a in newRecord.LinkedSymbol.Data.Params)
+                    {
+                        var argRecord = oldStack.Pop();
+                        var argName = argRecord.Value;
+                        if (!_symbolTable.ContainsKey(argName))
+                            throw new Exception(
+                                "Semantic Error: Cannot find parameter in symbol table to test arguments");
+                        var psymbol = _symbolTable[argName];
+                        if (psymbol == null || psymbol.Data.Type != _symbolTable[a].Data.Type)
+                            throw new Exception(
+                                string.Format(
+                                    "Semantic error at line {0}: Method for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                    lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
+                                    _symbolTable[a].Data.Type));
+                    }
+
+                //
+            }
+
             var scopeStrs = scope.Split('.');
             if(scopeStrs.Count()<2)
                 throw new Exception("Semanter error: Quite ridiculous...");

@@ -493,10 +493,7 @@ namespace KXIParse
                     var newSym = symId.Replace("_value", "");
                     var rA = GetRegister(newSym);
                     var rB = GetEmptyRegister();
-                    var loadOp = "LDR";
-                    if (symbolTable[newSym].Data.Type.Equals("Character") || symbolTable[newSym].Data.Type.Equals("char"))
-                        loadOp = "LDB";
-                    AddTriad("", loadOp, rB, rA, "", string.Format("; move value at {0} into {1}", newSym, rB));
+                    AddTriad("", "LDR", rB, rA, "", string.Format("; move value at {0} into {1}", newSym, rB));
                     RegisterAddSym(rB, symId);
                     RegisterAddSym(rB, "%inuse%");
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = rB });
@@ -978,9 +975,9 @@ namespace KXIParse
 
             AddTriad("", "CMP", rD, rD, "", "");
             AddTriad("", "ADI", rD, "4", "", "");
-            AddTriad("", "MUL", rB, rD, "", "");
+            AddTriad("", "MUL", rD, rB, "", "");
             AddTriad("", "MOV", rC, rA, "", "");
-            AddTriad("", "ADD", rC, rB, "", "");
+            AddTriad("", "ADD", rC, rD, "", "");
             CleanTempRegister(rD);
         }
         private void ConvertMathInstruction(Quad q)
