@@ -232,7 +232,7 @@ namespace KXIParse
             if(newRecord.LinkedSymbol != null)
             {
             //test arguments
-                var oldStack = new Stack<Record>(argumentList.ArgumentList).Reverse();
+                var oldStack = new List<Record>(argumentList.ArgumentList);
                 if (oldStack.Count() != newRecord.LinkedSymbol.Data.Params.Count())
                     throw new Exception(
                             string.Format(
@@ -240,7 +240,8 @@ namespace KXIParse
                                 lineNumber, newRecord.Value, newRecord.LinkedSymbol.Data.Params.Count()));
                     foreach (var a in newRecord.LinkedSymbol.Data.Params)
                     {
-                        var argRecord = oldStack.Pop();
+                        var argRecord = oldStack.First();
+                        oldStack.RemoveAt(0);
                         var argName = argRecord.Value;
                         var psymbol = _symbolTable[a];
                         var compareStr = argName;
@@ -569,6 +570,11 @@ namespace KXIParse
                 Type = RecordType.New,
                 TempVariable = _intercoder.GetTempVarName(typeSar)
             };
+            if (alSar.ArgumentList.Count() != sym.Data.Params.Count())
+                throw new Exception(
+                        string.Format(
+                            "Semantic error at line {0}: Constructor '{1}' does not have the correct number of parameters (expected {2})",
+                            lineNumber, typeSar.Value, sym.Data.Params.Count()));
             foreach (var a in sym.Data.Params)
             {
                 var argRecord = alSar.ArgumentList.Pop();
@@ -745,14 +751,14 @@ namespace KXIParse
 
         public void checkVarDuplicates(string name,string kind, string scope, int lineNumber)
         {
-            var count = 0;
+            var count = 1;
             var scopeList = scope.Split('.');
             var realScope = scopeList[0];
             if (scopeList.Count() > 1)
                 realScope += "." + scopeList[1];
             foreach (var sym in _symbolTable)
             {
-                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) && !sym.Value.Kind.Equals("param"))
+                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) && !sym.Value.Kind.Equals(kind))
                 {
                     if(!sym.Value.Kind.ToLower().Equals("constructor"))
                         count++;

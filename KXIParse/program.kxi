@@ -7,20 +7,20 @@ class iTree {
 	root = null;
     }
 
-    protected int fib(int root) {
-		if (root == 0) return 0;
+    protected int fib(int groot) {
+		if (groot == 0) return 0;
 		else
 		{
-			if (root == 1)
+			if (groot == 1)
 			{
 				return 1;
 			}
 			else 
-				return (fib(root - 1) + fib(root - 2));
+				return (fib(groot - 1) + fib(groot - 2));
 		}
 	}
 
-    unprotected bool add(char key) {
+    unprotected bool add(int key) {
 	if (root == null) {
 	    root = new iNode(key);
 	    return true;
@@ -137,10 +137,10 @@ class Message {
 	
     }
 
-    protected void print(int i, int end) {
-	while (i <= end) {
-	    cout << msg[i];
-	    i = i + 1;
+    protected void print(int j, int jend) {
+	while (j <= jend) {
+	    cout << msg[j];
+	    j = j + 1;
 	}
     }	
 
@@ -149,9 +149,6 @@ class Message {
 	print(0, 13);
 	cout << elm;
 	cout << '\n';
-    }
-
-     unprotected void msg1(int elm) {
     }
 
     unprotected bool msg2(char elm) {
@@ -197,16 +194,16 @@ class Syntax {
 	 ii[5000] = 5 + i; // yes
 	 i = ii[0];  // yes
 
-	 ss[0] = new Syntax(7, 'c', 3);
+	 ss[0] = new Syntax(7, 'c');
 	 ss[i] = ss[i+1]; // yes
 	 ss[i+7/3] = new Syntax(i, c); // yes
 
 	 spawn which(ii[0]) set iii; 
       } 
 
-      unprotected int which(int i) {
-         i = i * i;
-	 return i;
+      unprotected int which(int j) {
+         j = j * j;
+	 return j;
       }
 }
 
@@ -214,10 +211,10 @@ class Butterfly {
       protected int age = 42;
       protected char type = 'm';
 
-      Butterfly(int age, char type) {
-          cout << age;
+      Butterfly(int jage, char jtype) {
+          cout << jage;
           cout << '\n';
-	  cout << type;
+	  cout << jtype;
           cout << '\n';
       }
 
@@ -229,7 +226,7 @@ class Butterfly {
       }
 }
 void kxi2015 main() {
-    char key;
+    int key;
     char nl; // newline char
     iTree tree;
     Message msg = new Message();
@@ -241,9 +238,9 @@ void kxi2015 main() {
     msg.msg3();
     cin >> key;
     cout << '\n';
-    while (key != '!') 
+    while (key != 0) 
 	{
-		if (tree.add(key, key)) {
+		if (tree.add(key)) {
 			msg.msg1(key);
 			tree.print();
 		}

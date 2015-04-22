@@ -428,7 +428,7 @@ namespace KXIParse
             WriteQuad("", "FRAME", r1.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)
             {
-                foreach (var a in r1.ArgumentList)
+                foreach (var a in r1.ArgumentList.Reverse())
                     WriteQuad("", "PUSH", ToOperand(a), "", "", "function");
             }
             WriteQuad("", "CALL", r1.LinkedSymbol.SymId, "", "", "newobj");

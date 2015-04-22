@@ -483,6 +483,7 @@ namespace KXIParse
             private int[] register;
             private int threadIndex = 0;
             private int threadId = 0;
+            private bool updateHeapStack = true;
             private List<byte> mem
             {
                 get
@@ -537,8 +538,9 @@ namespace KXIParse
 
             private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
             {
-                if (false)//turn this on to get to see your stack
+                if (updateHeapStack)//turn this on to get to see your stack
                 {
+                    updateHeapStack = false;
                     var heapStackMem = new List<byte>();
                     heapStackMem.AddRange(bytes.GetRange(heapStartIndex, bytes.Count() - heapStartIndex));
                     var list = new List<string>();
@@ -577,6 +579,53 @@ namespace KXIParse
 
                 switch (command)
                 {
+                    case "JMP":
+                        newPC = label;
+                        break;
+                    case "JMR":
+                        newPC = GetReg(op1);
+                        break;
+                    case "TRP":
+                        switch (op1)
+                        {
+                            case 0:
+                                ENDPROGRAM = true;
+                                break;
+                            case 1:
+                                Console.Write(GetReg(0));
+                                break;
+                            case 2:
+                                short result;
+                                if (!Int16.TryParse(Console.ReadLine(), out result))
+                                {
+                                    result = 0;
+                                    if (DEBUG)
+                                        Console.WriteLine("Invalid input (can't convert to Int)");
+                                }
+                                SetReg(0, (int)result);
+                                break;
+                            case 3:
+                                Console.Write((char)GetReg(0));
+                                break;
+                            case 4:
+                                SetReg(0, (int)(Console.ReadKey().KeyChar));
+                                break;
+                            case 10:
+                                SetReg(0, GetReg(0) - 48);
+                                break;
+                            case 11:
+                                SetReg(0, GetReg(0) + 48);
+                                break;
+                            case 12:
+                                Console.WriteLine("Underflow");
+                                ENDPROGRAM = true;
+                                break;
+                            case 13:
+                                Console.WriteLine("Overflow");
+                                ENDPROGRAM = true;
+                                break;
+                        }
+                        break;
                     case "RUN":
                         CreateNewThread(op1, label);
                         break;
@@ -621,53 +670,6 @@ namespace KXIParse
                                 mem[label + 3] = (byte)(value & 0xFF);
                             }
                         }
-                        break;
-                    case "TRP":
-                        switch (op1)
-                        {
-                            case 0:
-                                ENDPROGRAM = true;
-                                break;
-                            case 1:
-                                Console.Write(GetReg(0));
-                                break;
-                            case 2:
-                                short result;
-                                if (!Int16.TryParse(Console.ReadLine(), out result))
-                                {
-                                    result = 0;
-                                    if (DEBUG)
-                                        Console.WriteLine("Invalid input (can't convert to Int)");
-                                }
-                                SetReg(0, (int)result);
-                                break;
-                            case 3:
-                                Console.Write((char)GetReg(0));
-                                break;
-                            case 4:
-                                SetReg(0, (int)(Console.ReadKey().KeyChar));
-                                break;
-                            case 10:
-                                SetReg(0, GetReg(0) - 48);
-                                break;
-                            case 11:
-                                SetReg(0, GetReg(0) + 48);
-                                break;
-                            case 12:
-                                Console.WriteLine("Underflow");
-                                ENDPROGRAM = true;
-                                break;
-                            case 13:
-                                Console.WriteLine("Overflow");
-                                ENDPROGRAM = true;
-                                break;
-                        }
-                        break;
-                    case "JMP":
-                        newPC = label;
-                        break;
-                    case "JMR":
-                        newPC = GetReg(op1);
                         break;
                     case "BNZ":
                         if (GetReg(op1) != 0)
@@ -720,7 +722,8 @@ namespace KXIParse
                         SetReg(op1, label);
                         break;
                     case "STR":
-                        {
+                    {
+                        updateHeapStack = true;
                             var value = GetReg(op1);
                             while(mem.Count()<=label+3)
                                 mem.Add(0);
@@ -732,6 +735,7 @@ namespace KXIParse
                         break;
                     case "STRI":
                         {
+                            updateHeapStack = true;
                             var value = GetReg(op1);
                             var address = GetReg(op2);
                             while (mem.Count() <= address + 3)
@@ -764,6 +768,7 @@ namespace KXIParse
                         break;
                     case "STB":
                         {
+                            updateHeapStack = true;
                             var value = GetReg(op1);
                             while (mem.Count() <= label)
                                 mem.Add(0);
@@ -772,6 +777,7 @@ namespace KXIParse
                         break;
                     case "STBI":
                         {
+                            updateHeapStack = true;
                             var value = GetReg(op1);
                             var address = GetReg(op2);
                             while (mem.Count() <= address)

@@ -51,8 +51,8 @@ namespace KXIParse
         private Dictionary<string, Symbol> symbolTable;
         private List<Quad> icodeList;
         private List<Triad> tcodeList;
-        private const int stackSize = 20000;
-        private const int heapSize = 20000;
+        private const int stackSize = 10000;
+        private const int heapSize = 10000;
         private int compareLabels = 0;
         private List<string> outputList; 
 
@@ -114,12 +114,32 @@ namespace KXIParse
                     }
                         break;
                     case "param":
+                    {
+                        //we're looking for a method
+                        foreach (
+                            var sym2 in
+                                symTable.Where(
+                                    sym2 =>
+                                        sym2.Value.Data != null && sym2.Value.Data.Params != null &&
+                                        sym2.Value.Data.Params.Contains(sym1.Key)))
+                        {
+                            sym2.Value.Vars++;
+                            sym1.Value.Offset = sym2.Value.Vars;
+                            found = true;
+                            break;
+                        }
+                    }
+                        break;
                     case "lvar":
                     case "temp":
                     case "atemp":
                     {
+                        if (sym1.Key.Equals("_tmp84"))
+                        {
+                            var y = 5;
+                        }
                         //we're looking for a method
-                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))
+                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last()) && sym2.Value.Scope.Equals(scope[0]+"."+scope[1])))
                         {
                             sym2.Value.Vars++;
                             sym1.Value.Offset = sym2.Value.Vars;
@@ -341,6 +361,7 @@ namespace KXIParse
                     case "RETURN":
                         try
                         {
+                            DeallocAllRegisters();
                             ConvertRtnInstruction(q);
                         }
                         catch (Exception e)
@@ -877,8 +898,6 @@ namespace KXIParse
             }
 
             CleanTempRegister(rB);
-
-            DeallocAllRegisters(rA);
 
             AddTriad("", "JMR", rA, "", "", "");
 
