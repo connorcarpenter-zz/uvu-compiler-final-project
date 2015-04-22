@@ -109,7 +109,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   #,");
         }
 
-        public void newArray(int lineNumber,bool arrayInit) //new array, check that operator is an int
+        public void newArray(int lineNumber,bool arrayInit,string scope) //new array, check that operator is an int
         {
             var index = _recordStack.Pop();
             if(!GetCompareString(index).Equals("int"))
@@ -117,9 +117,6 @@ namespace KXIParse
                     lineNumber, index.LinkedSymbol.Data.Type));
             var typeSar = _recordStack.Pop();
             //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
-            
-            
-
             if (arrayInit)
             {
                 var newSar = new Record(typeSar)
@@ -137,7 +134,7 @@ namespace KXIParse
                 var newSar = new Record(typeSar)
                 {
                     Type = RecordType.ArrayElement,
-                    TempVariable = _intercoder.GetTempVarName(typeSar,true)
+                    TempVariable = _intercoder.GetATempVarName(typeSar,scope)
                 };
 
                 //newSar.LinkedSymbol = GetSizeRecord(newSar);

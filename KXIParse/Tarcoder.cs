@@ -106,6 +106,7 @@ namespace KXIParse
                         foreach (var sym2 in symTable.Where(sym2 => sym2.Value.Kind.Equals("Class") && sym2.Value.Value.Equals(scope[1])))
                         {
                             sym2.Value.Vars++;
+                            AddOvarToSym(sym2.Value, sym1.Key);
                             sym1.Value.Offset = sym2.Value.Vars;
                             found = true;
                             break;
@@ -124,6 +125,7 @@ namespace KXIParse
                                         sym2.Value.Data.Params.Contains(sym1.Key)))
                         {
                             sym2.Value.Vars++;
+                            AddOvarToSym(sym2.Value, sym1.Key);
                             sym1.Value.Offset = sym2.Value.Vars;
                             found = true;
                             break;
@@ -134,14 +136,15 @@ namespace KXIParse
                     case "temp":
                     case "atemp":
                     {
-                        if (sym1.Key.Equals("_tmp84"))
+                        if (sym1.Key.Equals("_loc1"))
                         {
                             var y = 5;
                         }
                         //we're looking for a method
-                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last()) && sym2.Value.Scope.Equals(scope[0]+"."+scope[1])))
+                        foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last()) && (scope.Last().Equals("main") || sym2.Value.Scope.Equals(scope[0]+"."+scope[1]))))
                         {
                             sym2.Value.Vars++;
+                            AddOvarToSym(sym2.Value, sym1.Key);
                             sym1.Value.Offset = sym2.Value.Vars;
                             found = true;
                             break;
@@ -151,9 +154,19 @@ namespace KXIParse
                 }
 
                 if(!found)
-                    throw new Exception("Tarcode error: can't find class/method to associate with new variable/parameter");
+                    throw new Exception("Tarcode error: can't find class/method to associate with new variable/parameter of symbol: "+sym1);
             }
         }
+
+        private static void AddOvarToSym(Symbol sym, string ovar)
+        {
+            if (sym.Data == null)
+                sym.Data = new Data();
+            if(sym.Data.OVars==null)
+                sym.Data.OVars=new List<string>();
+            sym.Data.OVars.Add(ovar);
+        }
+
         public List<Triad> Generate()
         {
             GenerateStartCode();
@@ -497,7 +510,7 @@ namespace KXIParse
                     outputList.Add("                                "+t.ToString());
             }
         }
-        private string GetRegister(string symId)
+        private string GetRegister(string symId,bool iVarReturnPointer = false)
         {
             //check if this symid has data in a register already
             CheckLocationInit(symId);
@@ -594,7 +607,7 @@ namespace KXIParse
                     AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
                     RegisterAddSym(register2, symId);
                     RegisterAddSym(register2, "%inuse%");
-                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
+                    locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register2});
                     CleanTempRegister(register1);
                     CleanTempRegister(register2);
                     return register2;
@@ -719,26 +732,28 @@ namespace KXIParse
                     }
                         break;
                     case "ivar":
-                        {
+                    {
                             var register2 = GetEmptyRegister(true);
                             AddTriad("", "MOV", register2, "FP", "", "");
-                            AddTriad("", "ADI", register2, "-8", "", "; the pointer to the THIS pointer on the stack is now in "+register2);
+                            AddTriad("", "ADI", register2, "-8", "",
+                                "; the pointer to the THIS pointer on the stack is now in " + register2);
 
-                            AddTriad("", "LDR", register2, register2, "", "; the THIS pointer on the stack is now in " + register2);
+                            AddTriad("", "LDR", register2, register2, "",
+                                "; the THIS pointer on the stack is now in " + register2);
                             var offset = (symbol.Offset - 1)*4;
                             if (offset != 0)
                             {
                                 while (Math.Abs(offset) > 64)
                                 {
-                                    AddTriad("", "ADI", register2, (Math.Sign(offset) * 64).ToString(), "", "");
-                                    offset -= Math.Sign(offset) * 64;
+                                    AddTriad("", "ADI", register2, (Math.Sign(offset)*64).ToString(), "", "");
+                                    offset -= Math.Sign(offset)*64;
                                 }
                                 AddTriad("", "ADI", register2, offset.ToString(), "", "; freein up space on the stack");
                             }
 
                             AddTriad("", "STR", register, register2, "", "; " + register + " is now in " + sym);
                             CleanTempRegister(register2);
-                        }
+                    }
                         break;
                     case "literal":
                         break;
@@ -884,11 +899,10 @@ namespace KXIParse
             {
                 if (q.Operand1.Equals("this"))
                 {
-                    var retReg = GetEmptyRegister();
-                    AddTriad("", "ADI", rB, "-4", "", "");
-                    AddTriad("", "LDR", retReg, rB, "", "; loading this pointer into "+retReg);
-                    AddTriad("", "STR", retReg, "SP", "", "; store return value");
-                    CleanTempRegister(retReg);
+                    AddTriad("", "MOV", rB, "SP", "", "");
+                    AddTriad("", "ADI", rB, "-8", "", "");
+                    AddTriad("", "LDR", rB, rB, "", "; loading THIS pointer into "+rB);
+                    AddTriad("", "STR", rB, "SP", "", "; store return value");
                 }
                 else
                 {
@@ -978,7 +992,6 @@ namespace KXIParse
                 AddTriad("", "ADI", rB, "4", "", "");
             }
 
-            
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", "ADD", rC, rB, "", "");
             //AddTriad("", "LDR", rB, "FREE_HEAP_POINTER", "", "; Load address of free heap");

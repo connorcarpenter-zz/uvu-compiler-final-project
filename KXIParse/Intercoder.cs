@@ -54,18 +54,30 @@ namespace KXIParse
             _labelNames = new List<string>();
         }
 
-        public string GetTempVarName(Record r,bool isArrayElement = false)
+        public string GetTempVarName(Record r)
         {
             if (r == null || r.LinkedSymbol == null || r.LinkedSymbol.Scope == null || r.LinkedSymbol.Scope.Length == 0)
             {
                 throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
             }
             var name = "_tmp" + _tempVarNames.Count;
-            if (isArrayElement)
-                name = "_atmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Data=r.LinkedSymbol.Data,Kind=isArrayElement ? "atemp" : "temp",SymId=name,Value=name});
+            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Data=r.LinkedSymbol.Data,Kind="temp",SymId=name,Value=name});
+
+            return name;
+        }
+
+        public string GetATempVarName(Record r,string scope)
+        {
+            if (r == null || r.LinkedSymbol == null || r.LinkedSymbol.Scope == null || r.LinkedSymbol.Scope.Length == 0)
+            {
+                throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
+            }
+            var name = "_atmp" + _tempVarNames.Count;
+            _tempVarNames.Push(name);
+
+            symbolTable.Add(name, new Symbol { Scope = scope, Data = r.LinkedSymbol.Data, Kind = "atemp", SymId = name, Value = name });
 
             return name;
         }

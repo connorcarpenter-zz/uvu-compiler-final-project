@@ -665,7 +665,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     _semanter.arrayEnd(lastToken.LineNumber);
-                    _semanter.newArray(lastToken.LineNumber,true);
+                    _semanter.newArray(lastToken.LineNumber,true,GetScopeString());
                 }
                 Expect(TokenType.ArrayEnd);
             }
@@ -821,7 +821,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     _semanter.arrayEnd(lastToken.LineNumber);
-                    _semanter.newArray(lastToken.LineNumber,false);
+                    _semanter.newArray(lastToken.LineNumber,false,GetScopeString());
                 }
             }
             else
@@ -968,6 +968,7 @@ namespace KXIParse
         {
             if (DEBUGMETA) Console.WriteLine("--Variable Declaration");
 
+            var tokenType = GetToken().Type;
             var type = GetToken().Value;
             Expect(TokenType.Type);
 
@@ -1000,7 +1001,54 @@ namespace KXIParse
                 if (Semanting)
                     _semanter.EOE(lastToken.LineNumber);
             }
+            else
+            {
+                if (Peek(TokenType.Semicolon))
+                {
+                    if (Syntaxing)
+                    {
+                        throw new Exception("Syntaxer Error at Line " + lastToken.LineNumber + ": Unimplemented empty initializer of type " + tokenType);
+                        if (_recordTokens != null && _insertTokens != null)
+                        {
+                            var defaultString = "0";
+                            switch (tokenType)
+                            {
+                                case TokenType.Int:
+                                    defaultString = "0";
+                                    break;
+                                case TokenType.Char:
+                                    defaultString = "' '";
+                                    tokenType = TokenType.Character;
+                                    break;
+                                case TokenType.Bool:
+                                    defaultString = "false";
+                                    break;
+                                case TokenType.Void:
+                                case TokenType.Identifier:
+                                    tokenType = TokenType.Null;
+                                    defaultString = "null";
+                                    break;
+                                default:
+                                    throw new Exception("Syntaxer Error at Line "+lastToken.LineNumber+": Unimplemented default initializer of type "+tokenType);
+                                    break;
+                            }
+
+                            if (_recording)
+                            {
+                                _recordTokens.Add(new Token(TokenType.Assignment,"=",lastToken.LineNumber));
+                                _recordTokens.Add(new Token(tokenType, defaultString, lastToken.LineNumber));
+                            }
+                            else
+                            {
+                                _insertTokens.Add(new Token(TokenType.Assignment, "=", lastToken.LineNumber));
+                                _insertTokens.Add(new Token(tokenType, defaultString, lastToken.LineNumber));
+                            }
+                        }
+                    }
+                }
+            }
             Expect(TokenType.Semicolon);
+            
 
             if (Syntaxing)
             {

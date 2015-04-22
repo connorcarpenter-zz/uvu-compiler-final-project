@@ -7,16 +7,16 @@ class iTree {
 	root = null;
     }
 
-    protected int fib(int groot) {
-		if (groot == 0) return 0;
+    protected int fib(int jroot) {
+		if (jroot == 0) return 0;
 		else
 		{
-			if (groot == 1)
+			if (jroot == 1)
 			{
 				return 1;
 			}
 			else 
-				return (fib(groot - 1) + fib(groot - 2));
+				return (fib(jroot - 1) + fib(jroot - 2));
 		}
 	}
 
@@ -96,6 +96,26 @@ class iNode {
 }
 
 
+class Butterfly {
+      protected int age = 42;
+      protected char type = 'm';
+
+      Butterfly(int jage, char jtype) {
+          cout << jage;
+          cout << '\n';
+		cout << jtype;
+          cout << '\n';
+      }
+
+      unprotected void nest() {
+          cout << age;
+          cout << '\n';
+		  cout << type;
+          cout << '\n';
+      }
+}
+
+
 class Message {
     protected char msg[];
     protected int i;
@@ -145,21 +165,7 @@ class Message {
     }	
 
 
-    unprotected void msg1(int elm) {
-	print(0, 13);
-	cout << elm;
-	cout << '\n';
-    }
 
-    unprotected bool msg2(char elm) {
-	i = 14;
-	end = (i + 8);
-	print(i, end);
-	cout << msg[5];
-	print(6, 13);
-	cout << elm;
-	cout << '\n';
-    }
     
     unprotected int msg3() {
 	print(24, 28);
@@ -169,90 +175,15 @@ class Message {
     }
 }
 
-class Syntax {
-      unprotected int i = 7;
-      unprotected char c = 'a';
-      unprotected bool b = false;
 
-      Syntax(int j, char d) {
-         i = j;
-         c = d;
-      }
 
-      unprotected void checkit() {
-         char cc[] = new char[1000];
-	 int  ii[] = new int[512];
-	 Syntax ss[] = new Syntax[256];
-	 int iii = 0;
 
-	 cc[1] = cc[2]; // yes
-	 cc[31] = cc;   
-	 cc[100] = c;
-	 cc[10] = c;     // yes
-	 
-	 i[4] = 5 + i;
-	 ii[5000] = 5 + i; // yes
-	 i = ii[0];  // yes
-
-	 ss[0] = new Syntax(7, 'c');
-	 ss[i] = ss[i+1]; // yes
-	 ss[i+7/3] = new Syntax(i, c); // yes
-
-	 spawn which(ii[0]) set iii; 
-      } 
-
-      unprotected int which(int j) {
-         j = j * j;
-	 return j;
-      }
-}
-
-class Butterfly {
-      protected int age = 42;
-      protected char type = 'm';
-
-      Butterfly(int jage, char jtype) {
-          cout << jage;
-          cout << '\n';
-	  cout << jtype;
-          cout << '\n';
-      }
-
-      unprotected void nest() {
-          cout << age;
-          cout << '\n';
-	  cout << type;
-          cout << '\n';
-      }
-}
 void kxi2015 main() {
-    int key;
-    char nl; // newline char
-    iTree tree;
     Message msg = new Message();
-    Butterfly bff = new Butterfly(37, 'g');
-	tree = new iTree();
+	Butterfly bff = new Butterfly(37, 'g');
+	iTree tree = new iTree();
 
     bff.nest();
 
     msg.msg3();
-    cin >> key;
-    cout << '\n';
-    while (key != 0) 
-	{
-		if (tree.add(key)) {
-			msg.msg1(key);
-			tree.print();
-		}
-		else {
-			msg.msg2('k');
-			tree.print();
-
-
-		msg.msg3();
-		cin >> nl;
-		cin >> key;
-		cout << '\n';
-		}
-	}
 }
