@@ -512,6 +512,8 @@ namespace KXIParse
             public void ExecuteProgram()
             {
                 if (!IsMain) return;
+                var heapStackOutput = new List<byte>();
+                var heapStartIndex = mem.Count() - 1;
                 while (!ENDPROGRAM)
                 {
                     threads[threadIndex].ExecuteInstruction();
@@ -528,8 +530,43 @@ namespace KXIParse
                         if (threadIndex >= threads.Length)
                             threadIndex = 0;
                     }
+
+                    WriteHeapStack(mem, heapStartIndex);
                 }
             }
+
+            private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
+            {
+                if (true)
+                {
+                    var heapStackMem = new List<byte>();
+                    heapStackMem.AddRange(bytes.GetRange(heapStartIndex, bytes.Count() - heapStartIndex));
+                    var list = new List<string>();
+                    using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"C:\VMHeapStack.txt"))
+                    {
+                        while (heapStackMem.Any())
+                        {
+                            var str = "";
+                            byte[] byt = new byte[4];
+                            for (var i = 0; i < 4; i++)
+                            {
+                                if (heapStackMem.Any())
+                                {
+                                    str += heapStackMem[0] + " ";
+                                    byt[i] = heapStackMem[0];
+                                    heapStackMem.RemoveAt(0);
+                                }
+                            }
+                            var integ = (byt[0] << 24) +
+                                (byt[1] << 16) +
+                                (byt[2] << 8) +
+                                (byt[3]);
+                            file.WriteLine(str+" - "+integ);
+                        }
+                    }
+                }
+            }
+
             public void ExecuteInstruction()
             {
                 var command = opcodeMapR[(int)mem[PC]];
@@ -615,6 +652,14 @@ namespace KXIParse
                                 break;
                             case 11:
                                 SetReg(0, GetReg(0) + 48);
+                                break;
+                            case 12:
+                                Console.WriteLine("Underflow");
+                                ENDPROGRAM = true;
+                                break;
+                            case 13:
+                                Console.WriteLine("Overflow");
+                                ENDPROGRAM = true;
                                 break;
                         }
                         break;

@@ -51,9 +51,10 @@ namespace KXIParse
         private Dictionary<string, Symbol> symbolTable;
         private List<Quad> icodeList;
         private List<Triad> tcodeList;
-        private const int stackSize = 400;
-        private const int heapSize = 400;
+        private const int stackSize = 4000;
+        private const int heapSize = 4000;
         private int compareLabels = 0;
+        private List<string> outputList; 
 
         //key is R0, R1, R2...
         //value is the list of symids currently associated with that register
@@ -68,6 +69,7 @@ namespace KXIParse
         public Tarcoder(Dictionary<string,Symbol> _symbolTable, List<Quad> _icodeList)
         {
             symbolTable = _symbolTable;
+            outputList = new List<string>();
 
             //make main method
             symbolTable.Add("MAIN", new Symbol { Kind = "method", Scope = "g", SymId = "MAIN", Value = "main", Vars = 0 });
@@ -75,6 +77,7 @@ namespace KXIParse
             PostProcessSymTable(symbolTable, "lvar");
             PostProcessSymTable(symbolTable, "ivar");
             PostProcessSymTable(symbolTable, "temp");
+            PostProcessSymTable(symbolTable, "atemp");
 
             icodeList = _icodeList;
             tcodeList = new List<Triad>();
@@ -136,8 +139,21 @@ namespace KXIParse
             GenerateStartCode();
             Start();
             GenerateEndCode();
+            WriteOutput(outputList);
             return tcodeList;
         }
+
+        private void WriteOutput(List<string> list)
+        {
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"C:\VMOutput.txt"))
+            {
+                foreach (string line in list)
+                {
+                        file.WriteLine(line);
+                }
+            }
+        }
+
         private void GenerateStartCode()
         {
             AddTriad("", "", "", "", "", "; General Initialization");
@@ -197,6 +213,7 @@ namespace KXIParse
 
             foreach (var q in icodeList)
             {
+                outputList.Add(q.ToString());
                 if (q.Label.Length != 0)//if there's a label on the next line
                 {
                     DeallocAllRegisters();
@@ -312,7 +329,6 @@ namespace KXIParse
                         break;
                     case "CALL":
                         try { 
-                            DeallocAllRegisters();
                             ConvertCallInstruction(q);
                         }
                         catch (Exception e)
@@ -324,7 +340,6 @@ namespace KXIParse
                     case "RETURN":
                         try
                         {
-                            DeallocAllRegisters();
                             ConvertRtnInstruction(q);
                         }
                         catch (Exception e)
@@ -447,6 +462,8 @@ namespace KXIParse
                 t.Operand2 = operand2;
                 t.Comment = comment;
 
+                outputList.Add("                                "+t.ToString());
+
                 if(label.Length!=0)
                     throw new Exception("TCODE: in AddTriad(), double label all the way!");
             }
@@ -454,6 +471,8 @@ namespace KXIParse
             {
                 var t = new Triad(label, operation, operand1, operand2, comment);
                 tcodeList.Add(t);
+                if(!operation.Equals("REPLACENEXT"))
+                    outputList.Add("                                "+t.ToString());
             }
         }
         private string GetRegister(string symId)
@@ -491,6 +510,8 @@ namespace KXIParse
             }
 
             //find out where to get the symbol
+            if (!symbolTable.ContainsKey(symId))
+                throw new Exception("TCODE ERROR: SymId " + symId + " not in symbol table");
             var symbol = symbolTable[symId];
             switch(symbol.Kind)
             {
@@ -629,7 +650,9 @@ namespace KXIParse
         private bool DeallocRegister(string register)
         {
             if (registers[register].Contains("%temp%")) return false;
-            foreach (var sym in registers[register])
+            if (registers[register].Contains("%inuse%")) return false;
+            var tRegisters = new List<string>(registers[register]);
+            foreach (var sym in tRegisters)
             {
                 if (sym.StartsWith("_atmp") && sym.EndsWith("_value"))
                 {
@@ -642,6 +665,9 @@ namespace KXIParse
 
                         AddTriad("", "STR", register, rA, "", "; " + register + " is now in " + sym);
                         CleanInUseRegisters(register);
+                        registers[rA].Remove("%inuse%");
+                        locations[sym].RemoveAll(s => s.Register.Equals(register));
+                        continue;
                     }
                     catch (Exception e)
                     {
@@ -708,11 +734,21 @@ namespace KXIParse
         }
         private void DeallocAllRegisters()
         {
-            foreach (var r in registers)
+            var finished = false;
+            var count = 0;
+            while (!finished)
             {
-                if (!DeallocRegister(r.Key))
+                finished = true;
+                count++;
+                if(count>3)
+                if(count>10)
+                    throw new Exception("TCODE: In deallocAllRegisters(), tried 10 times but cant deallocate everything :/");
+                foreach (var r in registers)
                 {
-                    throw new Exception("TCODE: in DeallocAllRegisters(), for some reason register "+r.Key+" can't deallocate");
+                    if (!DeallocRegister(r.Key))
+                    {
+                        finished = false;
+                    }
                 }
             }
         }
@@ -841,10 +877,12 @@ namespace KXIParse
                 }
             }
 
-            AddTriad("", "JMR", rA, "", "", "");
-
             CleanTempRegister(rA);
             CleanTempRegister(rB);
+
+            DeallocAllRegisters();
+
+            AddTriad("", "JMR", rA, "", "", "");
         }
         private void ConvertMoveInstruction(Quad q)
         {
@@ -1013,9 +1051,11 @@ namespace KXIParse
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
-            AddTriad("", "JMP", q.Operand1.ToUpper(), "", "", "");
 
             CleanTempRegister(rA);
+            DeallocAllRegisters();
+
+            AddTriad("", "JMP", q.Operand1.ToUpper(), "", "", "");
         }
         public static string TCodeString(List<Triad> triads)
         {

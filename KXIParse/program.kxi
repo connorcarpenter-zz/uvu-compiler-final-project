@@ -4,7 +4,6 @@ class Message {
     protected int end;
 
     Message() {
-		i = 7;
     	msg = new char[100];
 		msg[0] = 'A';
 		msg[1] = 'd';
@@ -20,24 +19,6 @@ class Message {
 		msg[11] = 'n';
 		msg[12] = 't';
 		msg[13] = ':';
-		i = 14;
-		msg[i] = 'D';
-		msg[i+1] = 'u';
-		msg[i+2] = 'p';
-		msg[i+3] = 'l';
-		msg[i+4] = 'i';
-		msg[i+5] = 'c';
-		msg[i+6] = 'a';
-		msg[i+7] = 't';
-		msg[i+8] = 'e';
-		msg[i+9] = ' ';
-
-		msg[24] = 'E';
-		msg[25] = 'n';
-		msg[26] = 't';
-		msg[27] = 'e';
-		msg[28] = 'r';
-	
     }
 
     protected void print(int j, int jend) {
@@ -47,33 +28,15 @@ class Message {
 		}
     }	
 
-
     unprotected void msg1(int elm) {
 	print(0, 13);
 	cout << elm;
 	cout << '\n';
-    }
-
-    unprotected bool msg2(char elm) {
-	i = 14;
-	end = (i + 8);
-	print(i, end);
-	cout << msg[5];
-	print(6, 13);
-	cout << elm;
-	cout << '\n';
-    }
-    
-    unprotected int msg3() {
-	print(24, 28);
-	i = 5;
-	print(i, i);
-	print(6, 13);
     }
 }
 
 void kxi2015 main() {
     Message msg = new Message();
 
-    msg.msg3();
+    msg.msg1();
 }
