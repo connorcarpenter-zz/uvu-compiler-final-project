@@ -18,14 +18,16 @@ namespace KXIParse
         private bool Semanting { get; set; }
         private bool ConstructorCreated { get; set; }
         private static Semanter _semanter;
+        private static Lexer _lexer;
         private static List<Token> _recordTokens;
         private static List<Token> _insertTokens;
         private static bool _recording = true;
  
 
-        public Syntaxer(IEnumerable<Token> tokenList)
+        public Syntaxer(Lexer lexer)
         {
-            _tokens = new List<Token>(tokenList);
+            _tokens = new List<Token>();
+            _lexer = lexer;
         }
 
         public Dictionary<string, Symbol> SyntaxPass()
@@ -63,7 +65,6 @@ namespace KXIParse
 
         private void InitTokens()
         {
-            _tokensClone = new List<Token>(_tokens);
             _syntaxSymbolTable = new Dictionary<string, Symbol>();
             _scope = new List<string> {"g"};
         }
@@ -95,7 +96,7 @@ namespace KXIParse
 
         private static Token GetToken()
         {
-            return _tokensClone.Count == 0 ? null : _tokensClone.First();
+            return _lexer.GenerateToken();
         }
 
         private static void NextToken()
@@ -112,7 +113,7 @@ namespace KXIParse
         {
             if(lookahead==1)
                 return TokenData.EqualTo(GetToken().Type, value);
-            return TokenData.EqualTo(_tokensClone[lookahead - 1].Type, value);
+            return TokenData.EqualTo(_lexer.tokenList[lookahead - 1].Type, value);
         }
 
         private static bool Accept(TokenType value)
@@ -129,7 +130,7 @@ namespace KXIParse
                 else _insertTokens.Add(lastToken);
             }
 
-            NextToken();
+            //NextToken();
             DebugTracking();
             return true;
         }
@@ -151,7 +152,7 @@ namespace KXIParse
                 name = "NOOOOOTHINNNNNG!!!!!";
             }
             throw new Exception(string.Format(
-                            "Syntax error at line {0}. Expected a token of type: {1}, but found a: {3} (of type {2})",
+                            "Syntax error. Line {0}. Lexeme: \"{3}\" ({2}). Expected: \"{1}\".",
                             lineNumber,
                             TokenData.Get()[value].Name,
                             name,GetToken().Value
@@ -796,9 +797,16 @@ namespace KXIParse
                         _semanter.lPush(lastToken.Type, _syntaxSymbolTable[symId]);
                     }
                 }
-                var backupList = new List<Token>(_tokensClone);
-                if (!ExpressionZ())
-                    _tokensClone = backupList;
+                
+                //if(Peek())
+                /*
+                 * if (Accept(TokenType.Assignment))
+            if (Accept(TokenType.And) || Accept(TokenType.Or) || Accept(TokenType.Equals) ||
+                Accept(TokenType.NotEquals) || Accept(TokenType.LessOrEqual) || Accept(TokenType.MoreOrEqual) ||
+                Accept(TokenType.Less) || Accept(TokenType.More) || Accept(TokenType.Add) ||
+                Accept(TokenType.Subtract) || Accept(TokenType.Multiply) || Accept(TokenType.Divide))
+                 *///then
+                ExpressionZ(); connormakethisso!
             }
             catch (Exception e)
             {

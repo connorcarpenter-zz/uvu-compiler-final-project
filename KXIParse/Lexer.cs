@@ -9,6 +9,7 @@ namespace KXIParse
     {
         private Token _currentToken;
         private readonly System.IO.StreamReader _file;
+        public List<Token> tokenList;
         private string _currentLine;
         private int _lineNumber;
         private const int IdentifierMaxLength = 80;
@@ -16,70 +17,78 @@ namespace KXIParse
         private const string Endline = "#E#";
         private const string WhitespaceRegex = "^(\\s)*(" + Newline + ")?";
 
-        public Lexer(string fileName)
+        public Lexer(System.IO.StreamReader file)
         {
-            _file = new System.IO.StreamReader(fileName);
+            _file = file;
             _currentLine = _file.ReadLine();
             _currentToken = null;
             _lineNumber = 1;
+            tokenList = new List<Token>();
         }
-        public List<Token> GenerateTokens()
-        {
-            var tokenList = new List<Token>();
-            var lastToken = GetToken();
 
-            while (true)
+        public Token GenerateToken()
+        {
+            while (tokenList.Count() < 4)
             {
-                NextToken();
-                var currentToken = GetToken();
-                if (currentToken.Type == TokenType.EOT)
-                    break;
-                if (currentToken == lastToken) continue;
-                tokenList.Add(currentToken);
-                lastToken = currentToken;
+                GenerateTokens();
             }
 
-            _file.Close();
-            return PostProcess(tokenList);
-
+            tokenList.RemoveAt(0);
+            return tokenList[0];
         }
 
-        public List<Token> PostProcess(List<Token> tokenList)
+        public void GenerateTokens()
+        {
+            var lastToken = GetToken(); // :)
+
+            NextToken();
+            var currentToken = GetToken();
+            if (currentToken.Type == TokenType.EOT)
+                tokenList.Add(null);
+            if (currentToken != lastToken)
+                PostProcess(currentToken); //adds to tokenlist;
+        }
+
+        public void PostProcess(Token token)
         {
             //remove all comments
-            tokenList.RemoveAll(s => s.Type == TokenType.Comment);
+            if (token.Type == TokenType.Comment)
+                return;
 
             //throw exception if there's any unknowns
-            foreach (var t in tokenList.Where(t => t.Type == TokenType.Unknown))
+            if(token.Type == TokenType.Unknown)
                 throw new Exception(string.Format("Unknown symbol on line {0}: {1}",
-                                    t.LineNumber,
-                                    t.Value));
+                                    token.LineNumber,
+                                    token.Value));
 
             //turn back-to-back numbers into addition/subtraction statements
-            Token l = null;
-            for (var index = 0; index < tokenList.Count; index++)
+            if (tokenList.Count() >= 2)
             {
-                var t = tokenList[index];
-                if (l == null)
+                Token l = null;
+                for (var index = 0; index < tokenList.Count; index++)
                 {
-                    l = t;
-                    continue;
-                }
+                    var t = tokenList[index];
+                    if (l == null)
+                    {
+                        l = t;
+                        continue;
+                    }
 
-                if ((l.Type == TokenType.Number || l.Type == TokenType.Identifier) && t.Type == TokenType.Number &&
-                    (t.Value[0].Equals('+') || t.Value[0].Equals('-'))) 
-                {
-                    if (t.Value[0].Equals('+'))
-                        tokenList.Insert(index, new Token(TokenType.Add, "+", t.LineNumber));
-                    if (t.Value[0].Equals('-'))
-                        tokenList.Insert(index, new Token(TokenType.Subtract, "-", t.LineNumber));
-                    t.Value = t.Value.Remove(0, 1);
-                }
+                    if ((l.Type == TokenType.Number || l.Type == TokenType.Identifier) && t.Type == TokenType.Number &&
+                        (t.Value[0].Equals('+') || t.Value[0].Equals('-')))
+                    {
+                        if (t.Value[0].Equals('+'))
+                            tokenList.Insert(index, new Token(TokenType.Add, "+", t.LineNumber));
+                        if (t.Value[0].Equals('-'))
+                            tokenList.Insert(index, new Token(TokenType.Subtract, "-", t.LineNumber));
+                        t.Value = t.Value.Remove(0, 1);
+                    }
 
-                l = tokenList[index];
+                    l = tokenList[index];
+                }
             }
 
-            return tokenList;
+            tokenList.Add(token);
         }
 
         private Token GetToken()

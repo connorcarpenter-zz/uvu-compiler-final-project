@@ -1,69 +1,89 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace KXIParse
 {
     class Program
     {
         private const bool DEBUG = true;
+        private static string lastModified = "";
         static void Main(string[] args)
         {
-            try
+            var fileName = "";
+            if (DEBUG)
             {
-                Lexer lexer;
-                
-                if(DEBUG)
-                    lexer = new Lexer("../../program.kxi");
-                else
-                    lexer = new Lexer(args[0]);
-                var tokens = lexer.GenerateTokens();
-                if (false)
-                {
-                    PrintTokenList(tokens);
-                    Console.WriteLine("Lexical analysis is done");
-                    Console.ReadLine();
-                }
-
-                var syntaxer = new Syntaxer(tokens);
-                var symbolTable = syntaxer.SyntaxPass();
-                if (false)
-                {
-                    Console.WriteLine("Syntax pass is done");
-                    Console.ReadLine();
-
-                    PrintSymbolTable(symbolTable);
-                    Console.WriteLine("Symbol table is done");
-                    Console.ReadLine();
-                }
-
-                var icodeList = syntaxer.SemanticPass(symbolTable);
-                var symbolTable2 = Syntaxer._syntaxSymbolTable;
-                //Console.WriteLine("Semantics pass is done. Press enter to print final back-patched icode.");
-                //Console.ReadLine();
-                
-                foreach (var q in icodeList)
-                {
-                    if(q.Label.Length!=0)
-                        Console.WriteLine();
-                    Console.WriteLine(q.ToString());
-                }
-                Console.WriteLine("Finished with ICode generation\n");
-
-                var tarcoder = new Tarcoder(symbolTable2, icodeList);
-                var tcodeList = tarcoder.Generate();
-                foreach (var t in tcodeList)
-                {
-                    Console.WriteLine(t.ToString());
-                }
-                Console.WriteLine("Finished with TCode generation\n");
-                var tcodestring = Tarcoder.TCodeString(tcodeList);
-                VMShell.Execute(tcodestring);
+                fileName = "../../program.kxi";
             }
-            catch(Exception e)
+            else
             {
-                Console.WriteLine(e.Message);
+                fileName = args[0];
             }
-            Console.ReadLine();
+
+            
+            var done = false;
+            while (!done)
+            {
+                if (File.Exists(fileName))
+                {
+                    var dt = File.GetLastWriteTime(fileName);
+                    if (dt.ToString().Equals(lastModified))
+                    {
+                        System.Threading.Thread.Sleep(1000);
+                        continue;
+                    }
+                    lastModified = dt.ToString();
+                }
+
+                var file = new System.IO.StreamReader(fileName);
+                try
+                {
+                    var lexer = new Lexer(file);
+
+                    var syntaxer = new Syntaxer(lexer);
+                    var symbolTable = syntaxer.SyntaxPass();
+                    if (false)
+                    {
+                        Console.WriteLine("Syntax pass is done");
+                        Console.ReadLine();
+
+                        PrintSymbolTable(symbolTable);
+                        Console.WriteLine("Symbol table is done");
+                        Console.ReadLine();
+                    }
+
+                    var icodeList = syntaxer.SemanticPass(symbolTable);
+                    var symbolTable2 = Syntaxer._syntaxSymbolTable;
+                    //Console.WriteLine("Semantics pass is done. Press enter to print final back-patched icode.");
+                    //Console.ReadLine();
+
+                    foreach (var q in icodeList)
+                    {
+                        if (q.Label.Length != 0)
+                            Console.WriteLine();
+                        Console.WriteLine(q.ToString());
+                    }
+                    Console.WriteLine("Finished with ICode generation\n");
+
+                    var tarcoder = new Tarcoder(symbolTable2, icodeList);
+                    var tcodeList = tarcoder.Generate();
+                    foreach (var t in tcodeList)
+                    {
+                        Console.WriteLine(t.ToString());
+                    }
+                    Console.WriteLine("Finished with TCode generation\n");
+                    var tcodestring = Tarcoder.TCodeString(tcodeList);
+
+                    VMShell.Execute(tcodestring);
+
+                    done = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+                file.Close();
+            }
         }
 
         static void PrintTokenList(IEnumerable<Token> tokenList)
