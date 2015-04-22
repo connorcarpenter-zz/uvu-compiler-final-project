@@ -194,31 +194,32 @@ class Message {
 
 void kxi2015 main() {
     Message msg = new Message();
-	Butterfly bff = new Butterfly(37, 'g');
-	iTree tree = new iTree();
+	//Butterfly bff = new Butterfly(37, 'g');
+	//iTree tree = new iTree();
 	int key = 0;
 	char nl = '\n';
 
-    bff.nest();
+    //bff.nest();
 
-msg.msg2('k');
-
+	cin >> key;
+	msg.msg2('k');
+	cin >> key;
     msg.msg3();
 
 	cin >> key;
     cout << nl;
-	while (key != 0) 
-	{
-		if (tree.add(key)) {
-			msg.msg1(key);
-			tree.print();
-		}
-		else {
-			msg.msg2('k');
-			tree.print();
-			msg.msg3();
-			cin >> key;
-			cout << nl;
-		}
-	}
+	//while (key != 0) 
+	//{
+	//	if (tree.add(key)) {
+	//		msg.msg1(key);
+	//		tree.print();
+	//	}
+	//	else {
+	//		msg.msg2('k');
+	//		tree.print();
+	//		msg.msg3();
+	//		cin >> key;
+	//		cout << nl;
+	//	}
+	//}
 }

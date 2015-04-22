@@ -1061,9 +1061,11 @@ namespace KXIParse
             AddTriad("", "STR", rB, "SP", "", "; this pointer to the top of the stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
+            CleanTempRegister(rB);
+            CleanInUseRegisters(rB);
+            DeallocRegister(rB);
+
             CleanTempRegister(rA);
-            if (q.Operand2.Equals("this"))
-                CleanTempRegister(rB);
         }
         private void ConvertCallInstruction(Quad q)
         {
