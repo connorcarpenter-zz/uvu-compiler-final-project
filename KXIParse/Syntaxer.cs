@@ -843,7 +843,7 @@ namespace KXIParse
                 {
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
-                    _semanter.func();
+                    _semanter.func(GetScopeString());
                     if (Peek(TokenType.Semicolon))
                     {
                         var x = 5;

@@ -170,8 +170,8 @@ namespace KXIParse
         private void GenerateEndCode()
         {
             AddTriad("", "", "", "", "", "; Set up global variables and heap/stack information");
-            AddTriad("OVERFLOW", "TRP", "0", "", "","; Jump to this when there's overflow");
-            AddTriad("UNDERFLOW", "TRP", "0", "", "", "; Jump to this when there's underflow");
+            AddTriad("OVERFLOW", "TRP", "13", "", "","; Jump to this when there's overflow");
+            AddTriad("UNDERFLOW", "TRP", "12", "", "", "; Jump to this when there's underflow");
 
             foreach (var sym in symbolTable.Where(sym => sym.Value.Kind == "literal"))
             {
@@ -732,7 +732,7 @@ namespace KXIParse
             registers[register].Clear();
             return true;
         }
-        private void DeallocAllRegisters()
+        private void DeallocAllRegisters(string notReg ="")
         {
             var finished = false;
             var count = 0;
@@ -745,6 +745,7 @@ namespace KXIParse
                     throw new Exception("TCODE: In deallocAllRegisters(), tried 10 times but cant deallocate everything :/");
                 foreach (var r in registers)
                 {
+                    if (r.Key.Equals(notReg)) continue;
                     if (!DeallocRegister(r.Key))
                     {
                         finished = false;
@@ -877,12 +878,13 @@ namespace KXIParse
                 }
             }
 
-            CleanTempRegister(rA);
             CleanTempRegister(rB);
 
-            DeallocAllRegisters();
+            DeallocAllRegisters(rA);
 
             AddTriad("", "JMR", rA, "", "", "");
+
+            CleanTempRegister(rA);
         }
         private void ConvertMoveInstruction(Quad q)
         {
@@ -1048,14 +1050,13 @@ namespace KXIParse
                 methodSize -= Math.Sign(methodSize) * 64;
             }
             AddTriad("", "ADI", "SP", methodSize.ToString(), "", "; Freein up space on stack");
+
+            DeallocAllRegisters(rA);
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");
-
-            CleanTempRegister(rA);
-            DeallocAllRegisters();
-
             AddTriad("", "JMP", q.Operand1.ToUpper(), "", "", "");
+            CleanTempRegister(rA);
         }
         public static string TCodeString(List<Triad> triads)
         {

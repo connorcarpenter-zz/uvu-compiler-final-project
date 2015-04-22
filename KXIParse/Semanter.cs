@@ -205,7 +205,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   #]");
         }
 
-        public void func() //function
+        public void func(string scope) //function
         {
             var argumentList = _recordStack.Pop();
             var functionName = _recordStack.Pop();
@@ -229,7 +229,11 @@ namespace KXIParse
                               select s.Value).FirstOrDefault();
                 newRecord.LinkedSymbol = symbol;
             }
-            _intercoder.WriteFunctionCall(newRecord, argumentList, peekRecord, functionName,true);
+            var scopeStrs = scope.Split('.');
+            if(scopeStrs.Count()<2)
+                throw new Exception("Semanter error: Quite ridiculous...");
+            var scopeStr = scopeStrs[0] + "." + scopeStrs[1];
+            _intercoder.WriteFunctionCall(newRecord, argumentList, peekRecord, functionName,scopeStr);
 
             _recordStack.Push(newRecord);
 

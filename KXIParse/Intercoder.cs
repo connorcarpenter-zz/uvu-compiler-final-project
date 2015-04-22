@@ -382,18 +382,14 @@ namespace KXIParse
            //     IntercodeList.Remove(lastOrDefault);
         }
 
-        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4,bool isThis = false)
+        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4,string scope)
         {
             var tempVariable = "this";
-            if (!isThis)
-            {
-                tempVariable = r4.TempVariable.ToString();
-            }
-            else
-            {
-                if(!r3.LinkedSymbol.Kind.ToLower().Equals("method"))
-                    tempVariable = r3.LinkedSymbol.SymId;
-            }
+            if(!r3.LinkedSymbol.Kind.ToLower().Equals("method"))
+                tempVariable = r3.LinkedSymbol.SymId;
+            if (r1.LinkedSymbol.Scope.Equals(scope))
+                tempVariable = "this";
+
             WriteQuad("","FRAME",r1.LinkedSymbol.SymId,tempVariable,"","function");
             if (r2.ArgumentList != null && r2.ArgumentList.Count > 0)
             {
