@@ -748,20 +748,24 @@ namespace KXIParse
 
         public void checkVarDuplicates(string name,string kind, string scope, int lineNumber)
         {
-            var count = 1;
+            var count = 0;
             var scopeList = scope.Split('.');
             var realScope = scopeList[0];
             if (scopeList.Count() > 1)
                 realScope += "." + scopeList[1];
             foreach (var sym in _symbolTable)
             {
-                if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) && !sym.Value.Kind.Equals(kind))
+                if (!sym.Value.Kind.ToLower().Equals("constructor") && !sym.Value.Kind.ToLower().Equals("param"))
                 {
-                    if(!sym.Value.Kind.ToLower().Equals("constructor"))
+                    if ((sym.Value.Kind.Equals(kind) && sym.Value.Value.Equals(name) && sym.Value.Scope.Equals(scope)))
                         count++;
+                    else 
+                    if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) &&
+                        !sym.Value.Kind.Equals(kind))
+                        count+=2;
+                }
                     if(count>1)
                         throw new Exception("Semantic Error at Line "+lineNumber+": More than one symbols with the name \""+name+"\" in this scope.");
-                }
             }
         }
     }

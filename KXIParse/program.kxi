@@ -165,7 +165,21 @@ class Message {
     }	
 
 
+	unprotected void msg1(int elm) {
+		print(0, 13);
+		cout << elm;
+		cout << '\n';
+    }
 
+    unprotected bool msg2(char elm) {
+		i = 14;
+		end = (i + 8);
+		print(i, end);
+		cout << msg[5];
+		print(6, 13);
+		cout << elm;
+		cout << '\n';
+    }
     
     unprotected int msg3() {
 	print(24, 28);
@@ -182,8 +196,27 @@ void kxi2015 main() {
     Message msg = new Message();
 	Butterfly bff = new Butterfly(37, 'g');
 	iTree tree = new iTree();
+	int key = 0;
+	char nl = '\n';
 
     bff.nest();
 
     msg.msg3();
+
+	cin >> key;
+    cout << nl;
+	while (key != 0) 
+	{
+		if (tree.add(key)) {
+			msg.msg1(key);
+			tree.print();
+		}
+		else {
+			msg.msg2('k');
+			tree.print();
+			msg.msg3();
+			cin >> key;
+			cout << nl;
+		}
+	}
 }
