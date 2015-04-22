@@ -1039,6 +1039,13 @@ namespace KXIParse
                 else
                     rB = GetRegister(q.Operand2);
             }
+            var rC = GetEmptyRegister();
+
+            //pass off and dealloc return value
+            AddTriad("", "MOV", rC, rB, "", "; Move return value to " + rC);
+            CleanTempRegister(rB);
+            CleanInUseRegisters(rB);
+            DeallocRegister(rB);
 
             //first test for overflow
             AddTriad("","MOV",rA,"SP","","; Setup up activation record for "+q.Operand1+" method, testing for overflow");
@@ -1058,14 +1065,11 @@ namespace KXIParse
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust stack pointer for return address");
             AddTriad("", "STR", rA, "SP", "", "; PFP to Top of Stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
-            AddTriad("", "STR", rB, "SP", "", "; this pointer to the top of the stack");
+            AddTriad("", "STR", rC, "SP", "", "; this pointer to the top of the stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
-            CleanTempRegister(rB);
-            CleanInUseRegisters(rB);
-            DeallocRegister(rB);
-
             CleanTempRegister(rA);
+            CleanTempRegister(rC);
         }
         private void ConvertCallInstruction(Quad q)
         {
