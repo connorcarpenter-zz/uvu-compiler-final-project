@@ -61,10 +61,11 @@ namespace KXIParse
                 throw new Exception("Intercode Error: Trying to make a temp variable, but there's no scope to add it to");
             }
             var name = "_tmp" + _tempVarNames.Count;
-            if (isArrayElement) name = "_atmp" + _tempVarNames.Count;
+            if (isArrayElement)
+                name = "_atmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Kind="temp",SymId=name,Value=name});
+            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Kind=isArrayElement ? "atemp" : "temp",SymId=name,Value=name});
 
             return name;
         }
@@ -235,7 +236,7 @@ namespace KXIParse
                 throw new Exception("Somehow you got double labels in your list man");
         }
 
-        private string ToOperand(Record r)
+        private string ToOperand(Record r,bool atempIsPointer = false)
         {
             if (r == null) return "";
             if (r.LinkedSymbol != null)
@@ -249,8 +250,10 @@ namespace KXIParse
                         case Semanter.RecordType.Reference:
                         case Semanter.RecordType.New:
                         case Semanter.RecordType.NewArray:
-                        case Semanter.RecordType.ArrayElement:
                             return r.TempVariable.ToString();
+                            break;
+                        case Semanter.RecordType.ArrayElement:
+                            return atempIsPointer ? r.TempVariable.ToString() : r.TempVariable.ToString() + "_value";
                             break;
                         case Semanter.RecordType.LVar:
                         case Semanter.RecordType.Identifier:
@@ -259,7 +262,14 @@ namespace KXIParse
                                 return r.TempVariable.ToString();
                             if (r.LinkedSymbol.Kind.ToLower().Equals("ivar") && r.TempVariable != null &&
                                 r.TempVariable.ToString().Length != 0)
-                                return r.TempVariable.ToString();
+                            {
+                                if (!r.TempVariable.ToString().StartsWith("_atmp"))
+                                    return r.TempVariable.ToString();
+                                else
+                                {
+                                    return atempIsPointer ? r.TempVariable.ToString() : r.TempVariable.ToString() + "_value";
+                                }
+                            }
                             return r.LinkedSymbol.SymId;
                             break;
                         default:
@@ -267,9 +277,13 @@ namespace KXIParse
                     }
                 }
             }
-            if (r.Type == Semanter.RecordType.NewArray || r.Type == Semanter.RecordType.ArrayElement)
+            if (r.Type == Semanter.RecordType.NewArray)
             {
                 return r.TempVariable.ToString();
+            }
+            if (r.Type == Semanter.RecordType.ArrayElement)
+            {
+                return atempIsPointer ? r.TempVariable.ToString() : r.TempVariable.ToString() + "_value";
             }
             return r.Value;
         }
@@ -399,7 +413,7 @@ namespace KXIParse
 
         public void WriteArray(Record r1, Record r2, Record r3)
         {
-            WriteQuad("", "AEF", ToOperand(r2), ToOperand(r1), ToOperand(r3), "array");
+            WriteQuad("", "AEF", ToOperand(r2), ToOperand(r1), ToOperand(r3,true), "array");
         }
 
         public void WriteNewArray(Record r1, Record r2, Record r3)

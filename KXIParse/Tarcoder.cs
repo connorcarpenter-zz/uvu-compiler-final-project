@@ -113,6 +113,7 @@ namespace KXIParse
                     case "param":
                     case "lvar":
                     case "temp":
+                    case "atemp":
                     {
                         //we're looking for a method
                         foreach (var sym2 in symTable.Where(sym2 => (sym2.Value.Kind.ToLower().Equals("method") || sym2.Value.Kind.Equals("Constructor")) && sym2.Value.Value.Equals(scope.Last())))
@@ -455,7 +456,7 @@ namespace KXIParse
                 tcodeList.Add(t);
             }
         }
-        private string GetRegister(string symId)
+        private string GetRegister(string symId,bool convertArrayToPointer = false)
         {
             //check if this symid has data in a register already
             CheckLocationInit(symId);
@@ -468,7 +469,10 @@ namespace KXIParse
 
             //find out where to get the symbol
             var symbol = symbolTable[symId];
-            switch(symbol.Kind)
+            var symbolKind = symbol.Kind;
+            if (symbolKind.Equals("atemp") && !convertArrayToPointer)
+                symbolKind = "atemp_value";
+            switch(symbolKind)
             {
                 case "literal":
                 {
@@ -483,7 +487,23 @@ namespace KXIParse
                     CleanTempRegister(register);
                     return register;
                 }
+                case "atemp_value":
+                {
+                    //don't know what to put here
+                    var register1 = GetEmptyRegister();
+                    var register2 = GetEmptyRegister();
+
+                    AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
+                    RegisterAddSym(register2, symId);
+                    RegisterAddSym(register2, "%inuse%");
+                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
+                    CleanTempRegister(register1);
+                    CleanTempRegister(register2);
+                    return register2;
+                }
+                break;
                 case "temp":
+                case "atemp":
                 case "lvar":
                 case "param":
                 {
@@ -523,7 +543,7 @@ namespace KXIParse
                             AddTriad("", "ADI", register1, (Math.Sign(offset) * 64).ToString(), "", "");
                             offset -= Math.Sign(offset) * 64;
                         }
-                        AddTriad("", "ADI", register1, offset.ToString(), "", "; freein up space on the stack");
+                        AddTriad("", "ADI", register1, offset.ToString(), "", "; moving from THIS to the variable on the heap");
                     }
 
                     AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
@@ -604,8 +624,14 @@ namespace KXIParse
                 if(!symbolTable.ContainsKey(sym))
                     throw new Exception("TCODE: Trying to deallocate register associated with unknown symbol: "+sym);
                 var symbol = symbolTable[sym];
+                var symbolKind = symbol.Kind;
                 switch (symbol.Kind)
                 {
+                    case "atemp":
+                        {
+                            //implement this
+                        }
+                        break;
                     case "lvar":
                     case "temp":
                     case "param":
@@ -885,7 +911,7 @@ namespace KXIParse
         {
             var rA = GetRegister(q.Operand1);
             var rB = GetRegister(q.Operand2);
-            var rC = GetRegister(q.Operand3);
+            var rC = GetRegister(q.Operand3,false);
             var rD = GetEmptyRegister();
 
             AddTriad("", "CMP", rD, rD, "", "");
