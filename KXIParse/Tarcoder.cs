@@ -167,7 +167,7 @@ namespace KXIParse
                     AddTriad(sym.Key, ".INT", "1", "", "", "");
                 else if (sym.Value.Data.Type.Equals("False") || sym.Value.Data.Type.Equals("Null"))
                     AddTriad(sym.Key, ".INT", "0", "", "", "");
-                else if (sym.Value.Data.Type.Equals("Character"))
+                else if (sym.Value.Data.Type.Equals("Character") || sym.Value.Data.Type.Equals("char"))
                     AddTriad(sym.Key, ".BYT", sym.Value.Value, "", "", "");
                 else
                 {
@@ -456,7 +456,7 @@ namespace KXIParse
                 tcodeList.Add(t);
             }
         }
-        private string GetRegister(string symId,bool convertArrayToPointer = false)
+        private string GetRegister(string symId)
         {
             //check if this symid has data in a register already
             CheckLocationInit(symId);
@@ -467,18 +467,38 @@ namespace KXIParse
                 return l.Register;
             }
 
+            if (symId.StartsWith("_atmp") && symId.EndsWith("_value"))
+            {
+                try
+                {
+                    var newSym = symId.Replace("_value", "");
+                    var rA = GetRegister(newSym);
+                    var rB = GetEmptyRegister();
+                    var loadOp = "LDR";
+                    if (symbolTable[newSym].Data.Type.Equals("Character") || symbolTable[newSym].Data.Type.Equals("char"))
+                        loadOp = "LDB";
+                    AddTriad("", loadOp, rB, rA, "", string.Format("; move value at {0} into {1}", newSym, rB));
+                    RegisterAddSym(rB, symId);
+                    RegisterAddSym(rB, "%inuse%");
+                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = rB });
+                    CleanTempRegister(rB);
+                    return rB;
+                }
+                catch (Exception e)
+                {
+                    throw e;
+                }
+            }
+
             //find out where to get the symbol
             var symbol = symbolTable[symId];
-            var symbolKind = symbol.Kind;
-            if (symbolKind.Equals("atemp") && !convertArrayToPointer)
-                symbolKind = "atemp_value";
-            switch(symbolKind)
+            switch(symbol.Kind)
             {
                 case "literal":
                 {
                     var register = GetEmptyRegister();
                     var loadOp = "LDR";
-                    if (symbol.Data.Type == "Character")
+                    if (symbol.Data.Type.Equals("Character") || symbol.Data.Type.Equals("char"))
                         loadOp = "LDB";
                     AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
                     RegisterAddSym(register,symId);
@@ -487,21 +507,6 @@ namespace KXIParse
                     CleanTempRegister(register);
                     return register;
                 }
-                case "atemp_value":
-                {
-                    //don't know what to put here
-                    var register1 = GetEmptyRegister();
-                    var register2 = GetEmptyRegister();
-
-                    AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
-                    RegisterAddSym(register2, symId);
-                    RegisterAddSym(register2, "%inuse%");
-                    locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
-                    CleanTempRegister(register1);
-                    CleanTempRegister(register2);
-                    return register2;
-                }
-                break;
                 case "temp":
                 case "atemp":
                 case "lvar":
@@ -591,10 +596,15 @@ namespace KXIParse
         {
             registers[register].RemoveAll(s => s.Equals("%temp%"));
         }
-        private void CleanInUseRegisters()
+        private void CleanInUseRegisters(string register = null)
         {
-            foreach (var register in registers)
-                register.Value.RemoveAll(s => s.Equals("%inuse%"));
+            if (register == null)
+            {
+                foreach (var reg in registers)
+                    reg.Value.RemoveAll(s => s.Equals("%inuse%"));
+            }
+            else
+                registers[register].RemoveAll(s => s.Equals("%inuse%"));
         }
         private string GetAnyDeallocRegister()
         {
@@ -621,19 +631,31 @@ namespace KXIParse
             if (registers[register].Contains("%temp%")) return false;
             foreach (var sym in registers[register])
             {
+                if (sym.StartsWith("_atmp") && sym.EndsWith("_value"))
+                {
+                    try
+                    {
+                        LastUsedRegister(register);
+                        RegisterAddSym(register, "%inuse%");
+                        var newSym = sym.Replace("_value", "");
+                        var rA = GetRegister(newSym);
+
+                        AddTriad("", "STR", register, rA, "", "; " + register + " is now in " + sym);
+                        CleanInUseRegisters(register);
+                    }
+                    catch (Exception e)
+                    {
+                        throw e;
+                    }
+                }
                 if(!symbolTable.ContainsKey(sym))
                     throw new Exception("TCODE: Trying to deallocate register associated with unknown symbol: "+sym);
                 var symbol = symbolTable[sym];
-                var symbolKind = symbol.Kind;
                 switch (symbol.Kind)
                 {
-                    case "atemp":
-                        {
-                            //implement this
-                        }
-                        break;
                     case "lvar":
                     case "temp":
+                    case "atemp":
                     case "param":
                     {
                         var register2 = GetEmptyRegister(true);
@@ -911,7 +933,7 @@ namespace KXIParse
         {
             var rA = GetRegister(q.Operand1);
             var rB = GetRegister(q.Operand2);
-            var rC = GetRegister(q.Operand3,false);
+            var rC = GetRegister(q.Operand3);
             var rD = GetEmptyRegister();
 
             AddTriad("", "CMP", rD, rD, "", "");

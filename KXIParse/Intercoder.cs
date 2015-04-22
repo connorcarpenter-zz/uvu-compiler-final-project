@@ -65,7 +65,7 @@ namespace KXIParse
                 name = "_atmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Kind=isArrayElement ? "atemp" : "temp",SymId=name,Value=name});
+            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Data=r.LinkedSymbol.Data,Kind=isArrayElement ? "atemp" : "temp",SymId=name,Value=name});
 
             return name;
         }
