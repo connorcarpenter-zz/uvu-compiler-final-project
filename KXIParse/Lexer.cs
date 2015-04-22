@@ -39,7 +39,9 @@ namespace KXIParse
                 lastToken = currentToken;
             }
 
+            _file.Close();
             return PostProcess(tokenList);
+
         }
 
         public List<Token> PostProcess(List<Token> tokenList)

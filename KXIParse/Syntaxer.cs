@@ -151,10 +151,10 @@ namespace KXIParse
                 name = "NOOOOOTHINNNNNG!!!!!";
             }
             throw new Exception(string.Format(
-                            "Syntax error at line {0}. Expected a token of type: {1}, but found a: {2}",
+                            "Syntax error at line {0}. Expected a token of type: {1}, but found a: {3} (of type {2})",
                             lineNumber,
                             TokenData.Get()[value].Name,
-                            name
+                            name,GetToken().Value
                             ));
             return false;
         }
