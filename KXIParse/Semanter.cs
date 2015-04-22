@@ -232,22 +232,28 @@ namespace KXIParse
             if(newRecord.LinkedSymbol != null)
             {
             //test arguments
-                var oldStack = new Stack<Record>(argumentList.ArgumentList);
-                if (newRecord.LinkedSymbol != null)
+                var oldStack = new Stack<Record>(argumentList.ArgumentList).Reverse();
+                if (oldStack.Count() != newRecord.LinkedSymbol.Data.Params.Count())
+                    throw new Exception(
+                            string.Format(
+                                "Semantic error at line {0}: Method '{1}' does not have the correct number of parameters (expected {2})",
+                                lineNumber, newRecord.Value, newRecord.LinkedSymbol.Data.Params.Count()));
                     foreach (var a in newRecord.LinkedSymbol.Data.Params)
                     {
                         var argRecord = oldStack.Pop();
                         var argName = argRecord.Value;
-                        if (!_symbolTable.ContainsKey(argName))
-                            throw new Exception(
-                                "Semantic Error: Cannot find parameter in symbol table to test arguments");
-                        var psymbol = _symbolTable[argName];
-                        if (psymbol == null || psymbol.Data.Type != _symbolTable[a].Data.Type)
-                            throw new Exception(
-                                string.Format(
-                                    "Semantic error at line {0}: Method for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
-                                    lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
-                                    _symbolTable[a].Data.Type));
+                        var psymbol = _symbolTable[a];
+                        var compareStr = argName;
+                        if (argRecord.LinkedSymbol != null && argRecord.LinkedSymbol.Data != null)
+                            compareStr = argRecord.LinkedSymbol.Data.Type;
+                        if (_symbolTable.ContainsKey(compareStr)) compareStr = _symbolTable[compareStr].Data.Type;
+                        if (ValueMap.ContainsKey(argName)) compareStr = ValueMap[argName];
+                        if(!psymbol.Data.Type.Equals(compareStr))
+                        throw new Exception(
+                            string.Format(
+                                "Semantic error at line {0}: Method for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
+                                _symbolTable[a].Data.Type));
                     }
 
                 //

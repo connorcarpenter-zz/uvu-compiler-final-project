@@ -51,8 +51,8 @@ namespace KXIParse
         private Dictionary<string, Symbol> symbolTable;
         private List<Quad> icodeList;
         private List<Triad> tcodeList;
-        private const int stackSize = 4000;
-        private const int heapSize = 4000;
+        private const int stackSize = 20000;
+        private const int heapSize = 20000;
         private int compareLabels = 0;
         private List<string> outputList; 
 
@@ -319,8 +319,9 @@ namespace KXIParse
                         }
                         break;
                     case "FRAME":
-                        try { 
-                        ConvertFrameInstruction(q);
+                        try {
+                            DeallocAllRegisters();
+                            ConvertFrameInstruction(q);
                         }
                         catch (Exception e)
                         {
@@ -1048,7 +1049,6 @@ namespace KXIParse
             }
             AddTriad("", "ADI", "SP", methodSize.ToString(), "", "; Freein up space on stack");
 
-            DeallocAllRegisters(rA);
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
             AddTriad("", "STR", rA, "FP", "", "; Return address to the beginning of the frame");

@@ -537,7 +537,7 @@ namespace KXIParse
 
             private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
             {
-                if (true)
+                if (false)//turn this on to get to see your stack
                 {
                     var heapStackMem = new List<byte>();
                     heapStackMem.AddRange(bytes.GetRange(heapStartIndex, bytes.Count() - heapStartIndex));
