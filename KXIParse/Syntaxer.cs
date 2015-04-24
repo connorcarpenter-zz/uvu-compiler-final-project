@@ -18,7 +18,7 @@ namespace KXIParse
         private bool Semanting { get; set; }
         private bool ConstructorCreated { get; set; }
         private static Semanter _semanter;
-        private static Lexer _lexer;
+        private static ILexer _lexer;
         private static List<Token> _recordTokens;
         private static List<Token> _insertTokens;
         private static bool _recording = true;
@@ -96,7 +96,8 @@ namespace KXIParse
 
         private static Token GetToken()
         {
-            return _lexer.GenerateToken();
+            var output = _lexer.GetToken();
+            return output;
         }
 
         private static void NextToken()
@@ -109,11 +110,14 @@ namespace KXIParse
             _tokensClone.RemoveAt(0);
         }
 
-        private static bool Peek(TokenType value,int lookahead = 1)
+        private static bool Peek(TokenType value)
         {
-            if(lookahead==1)
-                return TokenData.EqualTo(GetToken().Type, value);
-            return TokenData.EqualTo(_lexer.tokenList[lookahead - 1].Type, value);
+            return TokenData.EqualTo(GetToken().Type, value);
+        }
+
+        private static bool PeekAhead(TokenType value)
+        {
+            return TokenData.EqualTo(_lexer.PeekToken().Type, value);
         }
 
         private static bool Accept(TokenType value)
@@ -130,7 +134,7 @@ namespace KXIParse
                 else _insertTokens.Add(lastToken);
             }
 
-            //NextToken();
+            _lexer.NextToken();
             DebugTracking();
             return true;
         }
@@ -145,18 +149,26 @@ namespace KXIParse
             {
                 lineNumber = GetToken().LineNumber;
                 name = TokenData.Get()[GetToken().Type].Name;
+                throw new Exception(string.Format(
+                            "Syntax error. Line {0}. Lexeme: \"{3}\" ({2}). Expected: ({1}).",
+                            lineNumber,
+                            TokenData.Get()[value].Name,
+                            name, GetToken().Value
+                            ));
             }
             else
             {
                 lineNumber = lastToken.LineNumber;
                 name = "NOOOOOTHINNNNNG!!!!!";
-            }
-            throw new Exception(string.Format(
-                            "Syntax error. Line {0}. Lexeme: \"{3}\" ({2}). Expected: \"{1}\".",
+                lineNumber = lastToken.LineNumber;
+                throw new Exception(string.Format(
+                            "Syntax error. Line {0}. Lexeme: \"{2}\" (Horrible). Expected: ({1}).",
                             lineNumber,
                             TokenData.Get()[value].Name,
-                            name,GetToken().Value
+                            name
                             ));
+            }
+            
             return false;
         }
 
@@ -797,16 +809,9 @@ namespace KXIParse
                         _semanter.lPush(lastToken.Type, _syntaxSymbolTable[symId]);
                     }
                 }
-                
-                //if(Peek())
-                /*
-                 * if (Accept(TokenType.Assignment))
-            if (Accept(TokenType.And) || Accept(TokenType.Or) || Accept(TokenType.Equals) ||
-                Accept(TokenType.NotEquals) || Accept(TokenType.LessOrEqual) || Accept(TokenType.MoreOrEqual) ||
-                Accept(TokenType.Less) || Accept(TokenType.More) || Accept(TokenType.Add) ||
-                Accept(TokenType.Subtract) || Accept(TokenType.Multiply) || Accept(TokenType.Divide))
-                 *///then
-                ExpressionZ(); connormakethisso!
+
+                if(PeekExpressionZ.Contains(GetToken().Type))
+                    ExpressionZ();
             }
             catch (Exception e)
             {
@@ -965,7 +970,7 @@ namespace KXIParse
                 }
             }
 
-            while (Peek(TokenType.Type) && Peek(TokenType.Identifier,2))
+            while (Peek(TokenType.Type) && PeekAhead(TokenType.Identifier))
                 VariableDeclaration();
             while (GetToken()!=null && (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type)))
                 Statement();
@@ -1015,7 +1020,6 @@ namespace KXIParse
                 {
                     if (Syntaxing)
                     {
-                        throw new Exception("Syntaxer Error at Line " + lastToken.LineNumber + ": Unimplemented empty initializer of type " + tokenType);
                         if (_recordTokens != null && _insertTokens != null)
                         {
                             var defaultString = "0";
@@ -1283,6 +1287,15 @@ namespace KXIParse
             TokenType.Number,
             TokenType.Character,
             TokenType.Identifier
+        };
+
+        private static readonly TokenType[] PeekExpressionZ =
+        {
+            TokenType.Assignment,
+            TokenType.And, TokenType.Or, TokenType.Equals,
+            TokenType.NotEquals, TokenType.LessOrEqual, TokenType.MoreOrEqual,
+            TokenType.Less, TokenType.More, TokenType.Add,
+            TokenType.Subtract, TokenType.Multiply, TokenType.Divide
         };
 
         private static void DebugTracking()
