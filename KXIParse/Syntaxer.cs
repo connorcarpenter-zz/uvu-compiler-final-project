@@ -38,7 +38,7 @@ namespace KXIParse
             _insertTokens = new List<Token>();
             InitTokens();
             StartSymbol();
-            _tokens = _recordTokens;
+            _lexer = new Slexer(_recordTokens);
 
             return _syntaxSymbolTable;
         }
@@ -203,6 +203,11 @@ namespace KXIParse
             //add ending return statement if it wasn't there
             //if(Semanting)_semanter.End();
             AddImpliedReturnStatement();
+
+            if (GetToken() != null)
+            {
+                throw new Exception(string.Format("Syntax Error. Line {0}. Found symbols after the main block: {1}",GetToken().LineNumber,GetToken().Value));
+            }
         }
 
         private void AddImpliedReturnStatement()
@@ -465,7 +470,7 @@ namespace KXIParse
                 if (Semanting)
                 {
                     //add label
-                    var symId = _semanter.FindSymId("method", GetScopeString(), name);
+                    var symId = _semanter.FindSymId("method", GetScopeString(), name,lastToken.LineNumber);
                     _semanter.AddMethodLabel(symId);
                 }
 
@@ -533,7 +538,7 @@ namespace KXIParse
             if (Semanting)
             {
                 //add label
-                var symId = _semanter.FindSymId("Constructor", GetScopeString(), name);
+                var symId = _semanter.FindSymId("Constructor", GetScopeString(), name, lastToken.LineNumber);
                 _semanter.AddMethodLabel(symId);
             }
 
@@ -712,6 +717,11 @@ namespace KXIParse
 
             var token = GetToken();
 
+            if(Semanting)
+            {
+                var throwaway = 5;
+            }
+
             if (!Expression())
                 throw new Exception(string.Format("Invalid argument at line {0}", token.LineNumber));
 
@@ -764,7 +774,7 @@ namespace KXIParse
                     }
                     if (Semanting)
                     {
-                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value);
+                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value, lastToken.LineNumber);
                         _semanter.lPush(lastToken.Type,_syntaxSymbolTable[symId]);
                     }
                         
@@ -805,7 +815,7 @@ namespace KXIParse
                     }
                     if (Semanting)
                     {
-                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value);
+                        var symId = _semanter.FindSymId("literal", GetScopeString(), lastToken.Value, lastToken.LineNumber);
                         _semanter.lPush(lastToken.Type, _syntaxSymbolTable[symId]);
                     }
                 }
@@ -815,8 +825,7 @@ namespace KXIParse
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
-                return false;
+                throw;
             }
             return true;
         }
@@ -827,6 +836,8 @@ namespace KXIParse
 
             if (Accept(TokenType.ArrayBegin))
             {
+                if(Accept(TokenType.ArrayEnd))
+                    throw new Exception(string.Format("Syntax error. Line {0}. Empty array indexer not allowed here.",lastToken.LineNumber));
                 if (Semanting)
                     _semanter.oPush(Semanter.Operator.ArrayBegin, lastToken.LineNumber);
                 Expression();
@@ -1055,6 +1066,22 @@ namespace KXIParse
                                 _insertTokens.Add(new Token(TokenType.Assignment, "=", lastToken.LineNumber));
                                 _insertTokens.Add(new Token(tokenType, defaultString, lastToken.LineNumber));
                             }
+
+                            var symId = GenerateSymId("Literal");
+                            var symbol = new Symbol()
+                            {
+                                Data = new Data()
+                                {
+                                    Type = TokenData.Get()[tokenType].Name,
+                                    AccessMod = "unprotected",
+                                    IsArray = false
+                                },
+                                Kind = "literal",
+                                Scope = GetScopeString(),
+                                SymId = symId,
+                                Value = defaultString
+                            };
+                            _syntaxSymbolTable.Add(symId, symbol);
                         }
                     }
                 }

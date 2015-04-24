@@ -1,44 +1,44 @@
-class iTreee {
+class iTree {
     protected int LUE = 42;
     protected iNode root;
-    protected int first;
+    protected bool first;
 
     iTree() {
 	root = null;
     }
 
-    protected init fib(int root) {
-	if (root == 0) return 0;
-	else if (root == 1) return jj;
-	else retrn (fib(root - 1) + fib(root - 2));
+    protected int fib(int jroot) {
+	if (jroot == 0) return 0;
+	else if (jroot == 1) return 1;
+	else return (fib(jroot - 1) + fib(jroot - 2));
     }
 
-    unprotected void add(chr key) {
-	if (root = null) {
+    unprotected bool add(char key) {
+	if (root == null) {
 	    root = new iNode(key);
 	    return true;
 	}
 	else
-	    return insert(key, root, LUE);
+	    return insert(key, root);
     }
 
-    protected boolean insert(char key, iNde node) {
+    protected bool insert(char key, iNode node) {
 		if (key < node.root)
 			if (node.left == null) {
-			node.left = new iTree();
+			node.left = new iNode(key);
 			return true;
 			}
 			else 
-			return insert(key, nde.left);
+			return insert(key, node.left);
 		else if (key > node.root)
 			if (node.right == null) {
 			node.right = new iNode(key);
 			return true;
 			}
 			else
-			return insert(key, node.rght);
+			return insert(key, node.right);
 		else { // key == node.root
-			 noode.inc();
+			 node.inc();
 			return false;
 		}
 	}
@@ -46,12 +46,12 @@ class iTreee {
 
     unprotected void print() {
 	first = true;
-	inorder(rot);
-	System.out.print('\n');
+	inorder(root);
+	cout << '\n';
     }
     
-    protected void inorder(iNode noode) {
-	if (node == null) return root;
+    protected void inorder(iNode node) {
+	if (node == null) return;
 
 	inorder(node.left);
 	visit(node);
@@ -76,12 +76,12 @@ class iTreee {
 }
 
 class iNode {
-    unprotected int root;
+    unprotected char root;
     unprotected int cnt = 0;
-    unprotected iode left = null;
+    unprotected iNode left = null;
     unprotected iNode right = null;
 
-    iNode(int key) {
+    iNode(char key) {
 		root = key;
 		cnt = 1;
     }
@@ -130,21 +130,18 @@ class Message {
 		msg[28] = 'r';
     }
 
-    protected void print(int i, int end) {
-		while (i <= end) {
-			cout << msg[i];
-			i = i + 1;
+    protected void print(int j, int jend) {
+		while (j <= jend) {
+			cout << msg[j];
+			j = j + 1;
 		}
     }	
 
 
-    unprotected void msg1(int elm) {
+    unprotected void msg1(char elm) {
 	print(0, 13);
 	cout << elm;
 	cout << '\n';
-    }
-
-     unprotected void msg1(int elm) {
     }
 
     unprotected bool msg2(char elm) {
@@ -171,36 +168,35 @@ class Syntax {
       unprotected bool b = false;
 
       Syntax(int j, char d) {
-         i = d;
-         c = j;
+         i = j;
+         c = d;
       }
 
       unprotected void checkit() {
         char cc[] = new char[100];
 		int  ii[] = new int[512];
-	 Syntax ss[] = new Synax[256];
+	 Syntax ss[] = new Syntax[256];
 
 	 cc[1] = cc[2]; // yes
 	 cc[31] = cc;   
-	 cc[100] = 5 + i;
+	 cc[100] = ' ';
 	 cc[10] = c;     // yes
 	 
-	 ii[] = ii[]; 
 	 i[4] = 5 + i;
 	 ii[5000] = 5 + i; // yes
-	 ii = ss;
+
 	 i = ii[0];  // yes
 
-	 ss[0] = new Syntax(7, 'c', 3);
+	 ss[0] = new Syntax(7, 'c');
 	 ss[i] = ss[i+1]; // yes
 	 ss[i+7/3] = new Syntax(i, c); // yes
 
 	 spawn which(ii[0]) set ii; 
       } 
 
-      unprotected int which(int i) {
-         i = i * i;
-	 return i;
+      unprotected int which(int j) {
+         j =j * j;
+	 return j;
       }
 }
 
@@ -208,10 +204,10 @@ class Butterfly {
       protected int age = 42;
       protected char type = 'm';
 
-      Butterfly(int age, char type) {
-          cout << age;
+      Butterfly(int jage, char jtype) {
+          cout << jage;
           cout << '\n';
-	  cout << type;
+	  cout << jtype;
           cout << '\n';
       }
 
@@ -236,18 +232,18 @@ void kxi2015 main() {
     cin >> key;
     cout << '\n';
     while (key != '!') {
-	if (tree.add(ky, key)) {
+	if (tree.add(key)) {
 	    msg.msg1(key);
 	    tree.print();
 	}
 	else {
-	    msg.msg2(1);
-	    tre.prin();
+	    msg.msg2(key);
+	    tree.print();
+		}
 
-
-	msg.msg3();
-	cin >> nl;
-	cin >> key;
-	cout << '\n';
+		msg.msg3();
+		cin >> nl;
+		cin >> key;
+		cout << '\n';
     }
 }

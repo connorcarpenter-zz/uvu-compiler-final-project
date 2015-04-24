@@ -112,10 +112,12 @@ namespace KXIParse
         public void newArray(int lineNumber,bool arrayInit,string scope) //new array, check that operator is an int
         {
             var index = _recordStack.Pop();
+            var typeSar = _recordStack.Pop();
+
             if(!GetCompareString(index).Equals("int"))
                 throw new Exception(string.Format("Semantic Error at line {0}: Cannot use a {1} as an array indexer, need an int",
-                    lineNumber, index.LinkedSymbol.Data.Type));
-            var typeSar = _recordStack.Pop();
+                    lineNumber, GetCompareString(index)));
+            
             //supposed to test that an array of the type in typesar can be created... but I'm pretty sure any data type can be arrayed, so I'm skipping this til later
             if (arrayInit)
             {
@@ -249,7 +251,7 @@ namespace KXIParse
                         if(!psymbol.Data.Type.Equals(compareStr))
                         throw new Exception(
                             string.Format(
-                                "Semantic error at line {0}: Method for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
                                 lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
                                 _symbolTable[a].Data.Type));
                     }
@@ -261,7 +263,7 @@ namespace KXIParse
             if(scopeStrs.Count()<2)
                 throw new Exception("Semanter error: Quite ridiculous...");
             var scopeStr = scopeStrs[0] + "." + scopeStrs[1];
-            _intercoder.WriteFunctionCall(newRecord, argumentList, peekRecord, functionName,scopeStr);
+            _intercoder.WriteFunctionCall(newRecord, argumentList, peekRecord, functionName,scopeStr,lineNumber);
 
             _recordStack.Push(newRecord);
 
@@ -733,12 +735,12 @@ namespace KXIParse
             //_intercoder.End();
         }
 
-        public string FindSymId(string kind, string scope, string value)
+        public string FindSymId(string kind, string scope, string value,int lineNumber)
         {
             foreach (var sym in _symbolTable.Where(sym => sym.Value.Kind == kind && sym.Value.Scope == scope && sym.Value.Value == value))
                 return sym.Value.SymId;
 
-            throw new Exception(string.Format("Semantic Error: Can't find symbol of kind: {0}, and value: {1} in symbol table",kind,value));
+            throw new Exception(string.Format("Semantic Error. Line {2} Can't find symbol of kind: '{0}', and value: '{1}' in symbol table",kind,value,lineNumber));
         }
 
         public void AddMethodLabel(string symId)

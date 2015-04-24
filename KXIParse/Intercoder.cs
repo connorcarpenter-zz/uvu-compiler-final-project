@@ -41,7 +41,7 @@ namespace KXIParse
         public static List<Quad> IntercodeList;
         private static Stack<string> _tempVarNames;
         private static List<string> _labelNames;
-        private static int labelNameIndex = -1;
+        private static int labelNameIndex { get; set; }
         private static Dictionary<string, Symbol> symbolTable
         {
             get { return Syntaxer._syntaxSymbolTable; }
@@ -49,6 +49,7 @@ namespace KXIParse
 
         public Intercoder(List<Quad> intercodeList)
         {
+            labelNameIndex = -1;
             IntercodeList = intercodeList;
             _tempVarNames = new Stack<string>();
             _labelNames = new List<string>();
@@ -394,11 +395,17 @@ namespace KXIParse
            //     IntercodeList.Remove(lastOrDefault);
         }
 
-        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4,string scope)
+        public void WriteFunctionCall(Record r1, Record r2,Record r3, Record r4,string scope,int lineNumber)
         {
             var tempVariable = "this";
-            if(!r3.LinkedSymbol.Kind.ToLower().Equals("method"))
+            if(r3.LinkedSymbol!=null && !r3.LinkedSymbol.Kind.ToLower().Equals("method"))
                 tempVariable = r3.LinkedSymbol.SymId;
+            if (r1.LinkedSymbol == null)
+            {
+                throw new Exception(string.Format("Semantic error. Line {0}. Encountered non-existant symbol \"{1}\"",
+                    lineNumber, r1.Value));
+                return;
+            }
             if (r1.LinkedSymbol.Scope.Equals(scope))
                 tempVariable = "this";
 

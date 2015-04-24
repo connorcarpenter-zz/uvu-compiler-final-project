@@ -13,6 +13,31 @@ namespace KXIParse
         Token PeekToken();
     }
 
+    class Slexer : ILexer
+    {
+        private List<Token> tokenList;
+
+        public Slexer(List<Token> _tokenList)
+        {
+            tokenList = _tokenList;
+        }
+        public Token GetToken()
+        {
+            return tokenList.Count()>0 ? tokenList[0] : null;
+        }
+
+        public void NextToken()
+        {
+            if (tokenList.Count > 0)
+                tokenList.RemoveAt(0);
+        }
+
+        public Token PeekToken()
+        {
+            return tokenList.Count() > 1 ? tokenList[1] : null;
+        }
+    }
+
     class Lexer : ILexer
     {
         private Token _currentToken;
@@ -68,7 +93,7 @@ namespace KXIParse
                 PostProcess(currentToken); //adds to tokenlist;
         }
 
-        public Token GenerateToken()
+        private Token GenerateToken()
         {
             LoadNextLine();
 
