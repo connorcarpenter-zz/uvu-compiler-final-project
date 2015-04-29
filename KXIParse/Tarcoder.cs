@@ -53,8 +53,12 @@ namespace KXIParse
         private List<Triad> tcodeList;
         private const int stackSize = 10000;
         private const int heapSize = 10000;
+        private const string PfpKey = "%PFP%";
+        private const string InUseKey = "%inuse%";
+        private const string TempKey = "%temp%";
         private int compareLabels = 0;
-        private List<string> outputList; 
+        private List<string> outputList;
+        private int outputCount = 0;
 
         //key is R0, R1, R2...
         //value is the list of symids currently associated with that register
@@ -431,6 +435,8 @@ namespace KXIParse
                             var rA = GetRegister(q.Operand1);
                             AddTriad("", "STR", rA, "SP", "", string.Format("; Push {0} on the stack; {0} is in {1}",q.Operand1,rA));
                             AddTriad("", "ADI", "SP", "-4", "", "");
+                            CleanInUseRegisters(rA);
+                            DeallocRegister(rA);
                         }
                         catch (Exception e)
                         {
@@ -497,7 +503,9 @@ namespace KXIParse
                 t.Operand2 = operand2;
                 t.Comment = comment;
 
-                outputList.Add("                                "+t.ToString());
+                outputList.Add("" + outputCount + "                                "+t.ToString());
+                if (!t.ToString().TrimStart(' ')[0].Equals(';'))
+                    outputCount++;
 
                 if(label.Length!=0)
                     throw new Exception("TCODE: in AddTriad(), double label all the way!");
@@ -506,8 +514,12 @@ namespace KXIParse
             {
                 var t = new Triad(label, operation, operand1, operand2, comment);
                 tcodeList.Add(t);
-                if(!operation.Equals("REPLACENEXT"))
-                    outputList.Add("                                "+t.ToString());
+                if (!operation.Equals("REPLACENEXT"))
+                {
+                    outputList.Add("" + outputCount + "                                " + t.ToString());
+                    if (!t.ToString().TrimStart(' ')[0].Equals(';'))
+                        outputCount++;
+                }
             }
         }
         private string GetRegister(string symId,bool iVarReturnPointer = false)
@@ -517,7 +529,7 @@ namespace KXIParse
             foreach (var l in locations[symId].Where(l => l.Type == LocType.Register))
             {
                 LastUsedRegister(l.Register);
-                RegisterAddSym(l.Register,"%inuse%");
+                RegisterAddSym(l.Register,InUseKey);
                 return l.Register;
             }
 
@@ -530,7 +542,7 @@ namespace KXIParse
                     var rB = GetEmptyRegister();
                     AddTriad("", "LDR", rB, rA, "", string.Format("; move value at {0} into {1}", newSym, rB));
                     RegisterAddSym(rB, symId);
-                    RegisterAddSym(rB, "%inuse%");
+                    RegisterAddSym(rB, InUseKey);
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = rB });
                     CleanTempRegister(rB);
                     return rB;
@@ -555,7 +567,7 @@ namespace KXIParse
                         loadOp = "LDB";
                     AddTriad("", loadOp, register, symId, "", "; Symbol " + symId + " is now in " + register);
                     RegisterAddSym(register,symId);
-                    RegisterAddSym(register, "%inuse%");
+                    RegisterAddSym(register, InUseKey);
                     locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register});
                     CleanTempRegister(register);
                     return register;
@@ -567,18 +579,27 @@ namespace KXIParse
                 {
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
-                    AddTriad("", "MOV", register1, "FP", "", "");
+                    if (locations.ContainsKey(PfpKey))
+                    {
+                        var pfpFirst = locations[PfpKey].First();
+                        if (pfpFirst != null)
+                            AddTriad("", "MOV", register1, pfpFirst.Register, "", "");
+                        else
+                            throw new Exception("Where dat PFP?!?!?~");
+                    }
+                    else
+                        AddTriad("", "MOV", register1, "FP", "", "");
                     var offset = (symbol.Offset+2)*-4;
                     while (Math.Abs(offset) > 64)
                     {
                         AddTriad("", "ADI", register1, (Math.Sign(offset) * 64).ToString(), "", "");
                         offset -= Math.Sign(offset) * 64;
                     }
-                    AddTriad("", "ADI", register1, offset.ToString(), "", "; freein up space on the stack");
+                    AddTriad("", "ADI", register1, offset.ToString(), "", "");
                     
                     AddTriad("", "LDR", register2, register1, "", "; Symbol "+symId+" is now in "+register2);
                     RegisterAddSym(register2,symId);
-                    RegisterAddSym(register2, "%inuse%");
+                    RegisterAddSym(register2, InUseKey);
                     locations[symId].Add(new MemLoc() { Type = LocType.Register, Register = register2 });
                     CleanTempRegister(register1);
                     CleanTempRegister(register2);
@@ -589,7 +610,16 @@ namespace KXIParse
                     //don't know what to put here
                     var register1 = GetEmptyRegister();
                     var register2 = GetEmptyRegister();
-                    AddTriad("", "MOV", register1, "FP", "", "");
+                    if (locations.ContainsKey(PfpKey))
+                    {
+                        var pfpFirst = locations[PfpKey].First();
+                        if (pfpFirst != null)
+                            AddTriad("", "MOV", register1, pfpFirst.Register, "", "");
+                        else
+                            throw new Exception("Where dat PFP?!?!?~");
+                    }
+                    else
+                        AddTriad("", "MOV", register1, "FP", "", "");
                     AddTriad("", "ADI", register1, "-8", "", "");
                     AddTriad("", "LDR", register1, register1, "", "; the pointer to the THIS pointer on the stack is now in " + register1);
 
@@ -606,7 +636,7 @@ namespace KXIParse
 
                     AddTriad("", "LDR", register2, register1, "", "; Symbol " + symId + " is now in " + register2);
                     RegisterAddSym(register2, symId);
-                    RegisterAddSym(register2, "%inuse%");
+                    RegisterAddSym(register2, InUseKey);
                     locations[symId].Add(new MemLoc() {Type = LocType.Register, Register = register2});
                     CleanTempRegister(register1);
                     CleanTempRegister(register2);
@@ -624,7 +654,7 @@ namespace KXIParse
             {
                 if (r.Value.Count == 0 && (r.Key != "R0" || useReg0))
                 {
-                    RegisterAddSym(r.Key, "%temp%");
+                    RegisterAddSym(r.Key, TempKey);
                     return r.Key;
                 }
             }
@@ -647,23 +677,23 @@ namespace KXIParse
 
         private void CleanTempRegister(string register)
         {
-            registers[register].RemoveAll(s => s.Equals("%temp%"));
+            registers[register].RemoveAll(s => s.Equals(TempKey));
         }
         private void CleanInUseRegisters(string register = null)
         {
             if (register == null)
             {
                 foreach (var reg in registers)
-                    reg.Value.RemoveAll(s => s.Equals("%inuse%"));
+                    reg.Value.RemoveAll(s => s.Equals(InUseKey));
             }
             else
-                registers[register].RemoveAll(s => s.Equals("%inuse%"));
+                registers[register].RemoveAll(s => s.Equals(InUseKey));
         }
         private string GetAnyDeallocRegister()
         {
             var register = lastUsedRegister.First();
             var i = 0;
-            while (registers[register].Contains("%inuse%"))
+            while (registers[register].Contains(InUseKey))
             {
                 LastUsedRegister(register);
                 register = lastUsedRegister.First();
@@ -673,7 +703,7 @@ namespace KXIParse
             }
             if (DeallocRegister(register))
             {
-                RegisterAddSym(register,"%temp%");
+                RegisterAddSym(register,TempKey);
                 return register;
             }
 
@@ -681,8 +711,8 @@ namespace KXIParse
         }
         private bool DeallocRegister(string register)
         {
-            if (registers[register].Contains("%temp%")) return false;
-            if (registers[register].Contains("%inuse%")) return false;
+            if (registers[register].Contains(TempKey)) return false;
+            if (registers[register].Contains(InUseKey)) return false;
             var tRegisters = new List<string>(registers[register]);
             foreach (var sym in tRegisters)
             {
@@ -691,13 +721,13 @@ namespace KXIParse
                     try
                     {
                         LastUsedRegister(register);
-                        RegisterAddSym(register, "%inuse%");
+                        RegisterAddSym(register, InUseKey);
                         var newSym = sym.Replace("_value", "");
                         var rA = GetRegister(newSym);
 
                         AddTriad("", "STR", register, rA, "", "; " + register + " is now in " + sym);
                         CleanInUseRegisters(register);
-                        registers[rA].Remove("%inuse%");
+                        registers[rA].Remove(InUseKey);
                         locations[sym].RemoveAll(s => s.Register.Equals(register));
                         continue;
                     }
@@ -717,7 +747,17 @@ namespace KXIParse
                     case "param":
                     {
                         var register2 = GetEmptyRegister(true);
-                        AddTriad("", "MOV", register2, "FP", "", "");
+
+                        if (locations.ContainsKey(PfpKey))
+                        {
+                            var pfpFirst = locations[PfpKey].First();
+                            if (pfpFirst != null)
+                                AddTriad("", "MOV", register2, pfpFirst.Register, "", "");
+                            else
+                                throw new Exception("Where dat PFP?!?!?~");
+                        }
+                        else
+                            AddTriad("", "MOV", register2, "FP", "", "");
                         var offset = (symbol.Offset + 2)*-4;
 
                         while (Math.Abs(offset) > 64)
@@ -734,7 +774,16 @@ namespace KXIParse
                     case "ivar":
                     {
                             var register2 = GetEmptyRegister(true);
-                            AddTriad("", "MOV", register2, "FP", "", "");
+                            if (locations.ContainsKey(PfpKey))
+                            {
+                                var pfpFirst = locations[PfpKey].First();
+                                if (pfpFirst != null)
+                                    AddTriad("", "MOV", register2, pfpFirst.Register, "", "");
+                                else
+                                    throw new Exception("Where dat PFP?!?!?~");
+                            }
+                            else
+                                AddTriad("", "MOV", register2, "FP", "", "");
                             AddTriad("", "ADI", register2, "-8", "",
                                 "; the pointer to the THIS pointer on the stack is now in " + register2);
 
@@ -768,6 +817,7 @@ namespace KXIParse
         }
         private void DeallocAllRegisters(string notReg ="")
         {
+            CleanPFP();
             var finished = false;
             var count = 0;
             while (!finished)
@@ -806,7 +856,7 @@ namespace KXIParse
 
             AddTriad("", "LDR", rC, "FREE_HEAP_POINTER", "", "; Load address of free heap");
             AddTriad("", "MOV", rA, rC, "", "; save address into " + rA);
-            var offset = (symbolTable[q.Operand1].Vars * 4);
+            var offset = ((symbolTable[q.Operand1].Vars+1) * 4);
             while (Math.Abs(offset) > 64)
             {
                 AddTriad("", "ADI", rC, (Math.Sign(offset) * 64).ToString(), "", "");
@@ -1068,24 +1118,51 @@ namespace KXIParse
             AddTriad("", "STR", rC, "SP", "", "; this pointer to the top of the stack");
             AddTriad("", "ADI", "SP", "-4", "", "; Adjust Stack pointer to new top");
 
-            CleanTempRegister(rA);
             CleanTempRegister(rC);
+            RegisterPFP(rA);
         }
+
+        private void RegisterPFP(string register)
+        {
+            RegisterAddSym(register, PfpKey);
+            if(locations.ContainsKey(PfpKey))
+                throw new Exception("Not supposed to have PFP yet!");
+            locations.Add(PfpKey,new List<MemLoc>());
+            locations[PfpKey].Add(new MemLoc() { Type = LocType.Register, Register = register });
+        }
+
+        private void CleanPFP()
+        {
+            if (!locations.ContainsKey(PfpKey)) return;
+            foreach (var l in locations[PfpKey].Where(l => l.Type == LocType.Register))
+            {
+                registers[l.Register].RemoveAll(s => s.Equals(PfpKey));
+                registers[l.Register].RemoveAll(s => s.Equals(TempKey));
+            }
+            locations.Remove(PfpKey);
+        }
+
         private void ConvertCallInstruction(Quad q)
         {
+            CleanPFP();
             var rA = GetEmptyRegister();
 
             //first make room for local variables
             var methodSize = symbolTable[q.Operand1].Vars;
-            if(symbolTable[q.Operand1].Data!=null && symbolTable[q.Operand1].Data.Params!=null)
+            if (symbolTable[q.Operand1].Data != null && symbolTable[q.Operand1].Data.Params != null)
+            {
                 methodSize -= symbolTable[q.Operand1].Data.Params.Count;
+                if(methodSize<0)throw new Exception("More parameters than vars for method: "+q.Operand1+"?");
+            }
             methodSize *= -4;
+            AddTriad("","CMP",rA,rA,"","");
             while (Math.Abs(methodSize) > 64)
             {
                 AddTriad("", "ADI", rA, (Math.Sign(methodSize) * 64).ToString(), "", "");
                 methodSize -= Math.Sign(methodSize) * 64;
             }
-            AddTriad("", "ADI", "SP", methodSize.ToString(), "", "; Freein up space on stack");
+            AddTriad("", "ADI", rA, methodSize.ToString(), "", "");
+            AddTriad("", "ADD", "SP", rA, "", "; Freein up space on stack");
 
             AddTriad("", "MOV", rA, "PC", "", "; Finding return address");
             AddTriad("", "ADI", rA, "16", "", "");
@@ -1093,6 +1170,7 @@ namespace KXIParse
             AddTriad("", "JMP", q.Operand1.ToUpper(), "", "", "");
             CleanTempRegister(rA);
         }
+
         public static string TCodeString(List<Triad> triads)
         {
             var sb = new StringBuilder();

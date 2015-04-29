@@ -572,6 +572,7 @@ namespace KXIParse
             public void ExecuteInstruction()
             {
                 var command = opcodeMapR[(int)mem[PC]];
+                var debugLine = PC/4;
                 var op1 = mem[PC + 1];
                 var op2 = mem[PC + 2];
                 var label = GetLabel();
