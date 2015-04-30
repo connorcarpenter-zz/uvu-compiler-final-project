@@ -76,6 +76,8 @@ namespace KXIParse
                 newSymbol.Scope = scope;
             if (scope.Length != 0 && r.Type == Semanter.RecordType.New && r.LinkedSymbol != null && r.LinkedSymbol.Kind.Equals("Constructor"))
                 newSymbol.Scope = scope;
+            if (scope.Length != 0 && r.Type == Semanter.RecordType.Reference && r.LinkedSymbol != null && r.LinkedSymbol.Kind.Equals("ivar"))
+                newSymbol.Scope = scope;
 
             return name;
         }

@@ -538,7 +538,7 @@ namespace KXIParse
 
             private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
             {
-                //return;
+                return;
                 if (updateHeapStack)//turn this on to get to see your stack
                 {
                     updateHeapStack = false;
