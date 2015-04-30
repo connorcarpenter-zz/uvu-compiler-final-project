@@ -64,7 +64,7 @@ namespace KXIParse
             var name = "_tmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            if (name.Equals("_tmp133"))
+            if (name.Equals("_tmp15"))
             {
                 var j = 3;
             }

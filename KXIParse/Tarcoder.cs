@@ -103,8 +103,7 @@ namespace KXIParse
                 var scope = sym1.Value.Scope.Split('.');
                 var found = false;
 
-                if (sym1.Key.Equals("_tmp130") || sym1.Key.Equals("_loc6") ||
-                    sym1.Key.Equals("_tmp133"))
+                if (sym1.Key.Equals("_tmp15") || sym1.Key.Equals("_par3"))
                 {
                     var a = 0;
                 }

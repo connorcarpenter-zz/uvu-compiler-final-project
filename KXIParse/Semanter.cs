@@ -707,7 +707,7 @@ namespace KXIParse
                         type = "int";
                     result = new Record(
                             RecordType.Temporary,
-                            _intercoder.GetTempVarName(i2),
+                            _intercoder.GetTempVarName(i2, i1.LinkedSymbol.Scope),
                             new Symbol { Data = new Data { Type = type }, Scope = i1.LinkedSymbol.Scope  });
                     result.TempVariable = i1.Value + "." + i2.Value;
                      _recordStack.Push(result);

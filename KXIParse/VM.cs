@@ -578,7 +578,7 @@ namespace KXIParse
                 {
                     var a = 0;
                 }
-                if (debugLine == 3625)
+                if (debugLine == 495)
                 {
                     var a = 0;
                 }
