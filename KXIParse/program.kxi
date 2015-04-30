@@ -182,7 +182,6 @@ void kxi2015 main() {
 		}
 
 		msg.msg3();
-		cin >> nl;
 		cin >> key;
 		cout << '\n';
     }

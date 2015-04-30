@@ -251,6 +251,12 @@ namespace KXIParse
             foreach (var q in icodeList)
             {
                 outputList.Add(q.ToString());
+
+                if (q.ToString().Equals("_MET6: REF _par7 _var6 _tmp63"))
+                {
+                    var f = 0;
+                }
+
                 if (q.Label.Length != 0)//if there's a label on the next line
                 {
                     DeallocAllRegisters();
@@ -435,8 +441,9 @@ namespace KXIParse
                             var rA = GetRegister(q.Operand1);
                             AddTriad("", "STR", rA, "SP", "", string.Format("; Push {0} on the stack; {0} is in {1}",q.Operand1,rA));
                             AddTriad("", "ADI", "SP", "-4", "", "");
-                            CleanInUseRegisters(rA);
-                            DeallocRegister(rA);
+
+                            locations[q.Operand1].RemoveAll(s => s.Register.Equals(rA));
+                            registers[rA].Clear();
                         }
                         catch (Exception e)
                         {
@@ -815,6 +822,7 @@ namespace KXIParse
             registers[register].Clear();
             return true;
         }
+
         private void DeallocAllRegisters(string notReg ="")
         {
             CleanPFP();
@@ -939,6 +947,17 @@ namespace KXIParse
             AddTriad("", "BGT", rA, "UNDERFLOW", "", "");
 
             AddTriad("", "LDR", rA, "FP", "", "; set previous frame to current frame and return");
+
+            //check if there's a return value
+            if (q.Operation.Equals("RETURN"))
+            {
+                if (!q.Operand1.Equals("this"))
+                {
+                    var retReg = GetRegister(q.Operand1);
+                    AddTriad("", "STR", retReg, "SP", "", "; store return value");
+                }
+            }
+
             AddTriad("", "MOV", rB, "FP", "", "");
             AddTriad("", "ADI", rB, "-4", "", "");
             AddTriad("", "LDR", "FP", rB, "", "");
@@ -953,11 +972,6 @@ namespace KXIParse
                     AddTriad("", "ADI", rB, "-8", "", "");
                     AddTriad("", "LDR", rB, rB, "", "; loading THIS pointer into "+rB);
                     AddTriad("", "STR", rB, "SP", "", "; store return value");
-                }
-                else
-                {
-                    var retReg = GetRegister(q.Operand1);
-                    AddTriad("", "STR", retReg, "SP", "", "; store return value");
                 }
             }
 

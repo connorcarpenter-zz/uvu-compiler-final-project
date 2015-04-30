@@ -514,9 +514,10 @@ namespace KXIParse
                 var newRecord = new Record(childId)
                 {
                     Type = RecordType.Reference,
-                    LinkedSymbol = symbol,
-                    TempVariable = _intercoder.GetTempVarName(childId)
+                    LinkedSymbol = symbol
                 };
+                if (newRecord.TempVariable == null || newRecord.TempVariable.ToString().Length == 0)
+                    newRecord.TempVariable = _intercoder.GetTempVarName(childId);
                 _recordStack.Push(newRecord);
 
                 if (childId.Type == RecordType.Func)

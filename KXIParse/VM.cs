@@ -542,19 +542,17 @@ namespace KXIParse
                 {
                     updateHeapStack = false;
                     var heapStackMem = new List<byte>();
+                    var counter = heapStartIndex;
                     heapStackMem.AddRange(bytes.GetRange(heapStartIndex, bytes.Count() - heapStartIndex));
-                    var list = new List<string>();
                     using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"C:\VMHeapStack.txt"))
                     {
                         while (heapStackMem.Any())
                         {
-                            var str = "";
                             byte[] byt = new byte[4];
                             for (var i = 0; i < 4; i++)
                             {
                                 if (heapStackMem.Any())
                                 {
-                                    str += heapStackMem[0] + " ";
                                     byt[i] = heapStackMem[0];
                                     heapStackMem.RemoveAt(0);
                                 }
@@ -563,7 +561,8 @@ namespace KXIParse
                                 (byt[1] << 16) +
                                 (byt[2] << 8) +
                                 (byt[3]);
-                            file.WriteLine(str+" - "+integ);
+                            file.WriteLine("L: "+counter+" // V:    "+integ);
+                            counter+=4;
                         }
                     }
                 }
@@ -573,6 +572,11 @@ namespace KXIParse
             {
                 var command = opcodeMapR[(int)mem[PC]];
                 var debugLine = PC/4;
+
+                if (debugLine == 2069)
+                {
+                    var a = 0;
+                }
                 var op1 = mem[PC + 1];
                 var op2 = mem[PC + 2];
                 var label = GetLabel();
