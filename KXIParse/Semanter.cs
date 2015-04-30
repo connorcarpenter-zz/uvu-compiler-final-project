@@ -758,17 +758,28 @@ namespace KXIParse
                 realScope += "." + scopeList[1];
             foreach (var sym in _symbolTable)
             {
-                if (!sym.Value.Kind.ToLower().Equals("constructor") && !sym.Value.Kind.ToLower().Equals("param"))
+                if ((sym.Value.Value.Equals(name) &&
+                     sym.Value.Scope.Equals(scope)))
                 {
-                    if ((sym.Value.Kind.Equals(kind) && sym.Value.Value.Equals(name) && sym.Value.Scope.Equals(scope)))
-                        count++;
-                    else 
-                    if (sym.Value.Value.Equals(name) && sym.Value.Scope.StartsWith(realScope) &&
-                        !sym.Value.Kind.Equals(kind))
-                        count+=2;
+                    var checkStr = sym.Value.Kind + "/" + kind;
+                    switch (checkStr)
+                    {
+                        case "Class/Class":
+                        case "Constructor/Constructor":
+                        case "method/method":
+                        case "param/param":
+                        case "ivar/ivar":
+                        case "lvar/lvar":
+
+                        case "lvar/param":
+                        case "param/lvar":
+                            count++;
+                            break;
+                    }
                 }
-                    if(count>1)
-                        throw new Exception("Semantic Error at Line "+lineNumber+": More than one symbols with the name \""+name+"\" in this scope.");
+
+                if(count>=2)
+                        throw new Exception("Semantic Error at Line "+lineNumber+": More than one symbol with the name \""+name+"\" in this scope.");
             }
         }
     }

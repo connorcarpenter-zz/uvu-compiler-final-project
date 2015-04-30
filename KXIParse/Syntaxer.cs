@@ -422,6 +422,11 @@ namespace KXIParse
                             Value = name
                         });
                 }
+                if (Semanting)
+                {
+                    //check for duplicate param/ivar names
+                    _semanter.checkVarDuplicates(name, "ivar", GetScopeString(), lastToken.LineNumber);
+                }
             }
             else
             {
