@@ -13,7 +13,7 @@ class iTree {
 	else return (fib(root - 1) + fib(root - 2));
     }
 
-    unprotected bool add(int key) {
+    unprotected bool add(char key) {
 	if (root == null) {
 	    root = new iNode(key);
 	    return true;
