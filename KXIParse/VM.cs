@@ -538,6 +538,7 @@ namespace KXIParse
 
             private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
             {
+                return;
                 if (updateHeapStack)//turn this on to get to see your stack
                 {
                     updateHeapStack = false;
@@ -573,7 +574,7 @@ namespace KXIParse
                 var command = opcodeMapR[(int)mem[PC]];
                 var debugLine = PC/4;
 
-                if (debugLine == 2069)
+                if (debugLine == 2324)
                 {
                     var a = 0;
                 }

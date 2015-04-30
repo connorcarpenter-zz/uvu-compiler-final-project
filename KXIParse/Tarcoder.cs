@@ -252,7 +252,7 @@ namespace KXIParse
             {
                 outputList.Add(q.ToString());
 
-                if (q.ToString().Equals("_MET6: REF _par7 _var6 _tmp63"))
+                if (q.ToString().Equals("FRAME _met8 this "))
                 {
                     var f = 0;
                 }
@@ -1075,7 +1075,7 @@ namespace KXIParse
             AddTriad("", "ADD", rC, rB, "", "");
             //AddTriad("", "LDR", rB, "FREE_HEAP_POINTER", "", "; Load address of free heap");
             //AddTriad("", "ADD", rC, rB, "", "");
-            AddTriad("", "LDR", rC, rC, "", string.Format("; ref: {0}'s {1} is now in {2}",rA,rB,rC));
+            //AddTriad("", "LDR", rC, rC, "", string.Format("; ref: {0}'s {1} is now in {2}",rA,rB,rC));
             CleanTempRegister(rB);
         }
         private void ConvertArrayRefInstruction(Quad q)
