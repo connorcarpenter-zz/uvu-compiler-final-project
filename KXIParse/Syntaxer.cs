@@ -766,7 +766,7 @@ namespace KXIParse
                 {
                     _semanter.parenEnd(lastToken.LineNumber);
                     _semanter.EAL();
-                    _semanter.newObj(lastToken.LineNumber);
+                    _semanter.newObj(lastToken.LineNumber,GetScopeString());
                 }
             }
         }

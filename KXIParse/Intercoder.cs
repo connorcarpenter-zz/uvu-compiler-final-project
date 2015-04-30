@@ -64,7 +64,7 @@ namespace KXIParse
             var name = "_tmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            if (name.Equals("_tmp55"))
+            if (name.Equals("_tmp133"))
             {
                 var j = 3;
             }
@@ -73,6 +73,8 @@ namespace KXIParse
             symbolTable.Add(name,newSymbol);
 
             if (scope.Length!=0 && r.Type == Semanter.RecordType.Func && r.LinkedSymbol != null && r.LinkedSymbol.Kind.Equals("method") && !newSymbol.Scope.EndsWith(r.LinkedSymbol.Value))
+                newSymbol.Scope = scope;
+            if (scope.Length != 0 && r.Type == Semanter.RecordType.New && r.LinkedSymbol != null && r.LinkedSymbol.Kind.Equals("Constructor"))
                 newSymbol.Scope = scope;
 
             return name;
@@ -453,9 +455,9 @@ namespace KXIParse
             WriteQuad("","NEW",secondTemp,ToOperand(r3),"","array");
         }
 
-        public void WriteNewObj(Record r1,Record r2)
+        public void WriteNewObj(Record r1,Record r2,string scope)
         {
-            var newTemp = GetTempVarName(r1);
+            var newTemp = GetTempVarName(r1,scope);
             WriteQuad("", "NEWI", ""+r2.LinkedSymbol.SymId, newTemp,"", "newobj");
             WriteQuad("", "FRAME", r1.LinkedSymbol.SymId, newTemp, "", "newobj");
             if (r1.ArgumentList != null && r1.ArgumentList.Count > 0)

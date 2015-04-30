@@ -580,7 +580,7 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   oPush: " + o.ToString());
         }
 
-        public void newObj(int lineNumber)
+        public void newObj(int lineNumber,string scope)
         {
             var alSar = _recordStack.Pop();
             var typeSar = _recordStack.Pop();
@@ -598,7 +598,7 @@ namespace KXIParse
                 ArgumentList = new Stack<Record>(),
                 LinkedSymbol = sym,
                 Type = RecordType.New,
-                TempVariable = _intercoder.GetTempVarName(typeSar)
+                TempVariable = _intercoder.GetTempVarName(typeSar,scope)
             };
             if (alSar.ArgumentList.Count() != sym.Data.Params.Count())
                 throw new Exception(
@@ -625,7 +625,7 @@ namespace KXIParse
             var classSymbol = GetSymbol("g", typeSar);
             if (classSymbol != null)
                 typeSar.LinkedSymbol = classSymbol;
-            _intercoder.WriteNewObj(newSar,typeSar);
+            _intercoder.WriteNewObj(newSar,typeSar,scope);
 
             if(DEBUG)Console.WriteLine("   newObj: " + typeSar.Value);
         }
