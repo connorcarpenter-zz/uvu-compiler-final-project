@@ -6,7 +6,7 @@ namespace KXIParse
 {
     class Program
     {
-        private const bool DEBUG = true;
+        private const bool DEBUG = false;
         private static string lastModified = "";
         static void Main(string[] args)
         {
