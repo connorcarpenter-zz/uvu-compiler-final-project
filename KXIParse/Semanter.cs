@@ -289,7 +289,7 @@ namespace KXIParse
                 sar.LinkedSymbol.Data.WasArray = false;
             }
             if (!GetCompareString(sar).Equals("int"))
-                throw new Exception(string.Format("Semantic error at line {0}: Spawn status variable {1} must be of typ: integer", lineNumber,sar.Value));
+                throw new Exception(string.Format("Semantic error at line {0}: Spawn status variable {1} must be of type: integer", lineNumber,sar.Value));
             var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
             if (DEBUG) Console.WriteLine("   checkSpawn: " + refSar.Value);
         }
