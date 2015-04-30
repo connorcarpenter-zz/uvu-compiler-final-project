@@ -103,7 +103,8 @@ namespace KXIParse
                 var scope = sym1.Value.Scope.Split('.');
                 var found = false;
 
-                if(sym1.Key.Equals("_tmp55") || sym1.Key.Equals("_par4"))
+                if (sym1.Key.Equals("_tmp130") || sym1.Key.Equals("_loc6") ||
+                    sym1.Key.Equals("_tmp133"))
                 {
                     var a = 0;
                 }
@@ -258,7 +259,7 @@ namespace KXIParse
             {
                 outputList.Add(q.ToString());
 
-                if (q.ToString().Equals("FRAME _met4 this "))
+                if (q.ToString().Equals("FRAME _con0 _tmp133 "))
                 {
                     var f = 0;
                 }

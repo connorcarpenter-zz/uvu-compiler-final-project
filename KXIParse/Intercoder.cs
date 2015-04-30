@@ -217,6 +217,10 @@ namespace KXIParse
             {
                 var nextQuad = new Quad(label, op0, op1, op2, op3);
                 IntercodeList.Add(nextQuad);
+                if (nextQuad.ToString().StartsWith("_MET9: RETURN"))
+                {
+                    var x = 5;
+                }
 
                 if (DEBUG)
                     if((op3==null) || !op3.Equals("OPENLABELSLOT"))

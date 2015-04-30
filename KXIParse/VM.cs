@@ -538,7 +538,7 @@ namespace KXIParse
 
             private void WriteHeapStack(List<byte> bytes, int heapStartIndex)
             {
-                return;
+                //return;
                 if (updateHeapStack)//turn this on to get to see your stack
                 {
                     updateHeapStack = false;
@@ -578,7 +578,7 @@ namespace KXIParse
                 {
                     var a = 0;
                 }
-                if (debugLine == 1430)
+                if (debugLine == 3625)
                 {
                     var a = 0;
                 }

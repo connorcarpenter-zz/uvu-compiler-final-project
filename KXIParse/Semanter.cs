@@ -302,7 +302,7 @@ namespace KXIParse
             var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist so...
             if (sar.LinkedSymbol != null && sar.LinkedSymbol.Data != null && sar.LinkedSymbol.Data.WasArray)
             {
-                sar.LinkedSymbol.Data.IsArray = true;
+                sar.LinkedSymbol.Data.IsArray = true;//GREGSLOTH
                 sar.LinkedSymbol.Data.WasArray = false;
             }
             if (!GetCompareString(sar).Equals("int"))
@@ -723,7 +723,7 @@ namespace KXIParse
                     if (i2.LinkedSymbol != null && i2.LinkedSymbol.Data != null && i2.LinkedSymbol.Data.WasArray)
                     {
                         i2.LinkedSymbol.Data.WasArray = false;
-                        i2.LinkedSymbol.Data.IsArray = true;
+                        i2.LinkedSymbol.Data.IsArray = true;////GREGSLOTH
                     }
                 }
             }

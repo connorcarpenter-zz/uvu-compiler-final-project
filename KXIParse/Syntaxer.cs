@@ -556,11 +556,57 @@ namespace KXIParse
 
             MethodBody();
 
+            
+
+            AddImpliedReturnStatement();
+
+            if (Syntaxing)
+            {
+                if (_insertTokens != null && !ConstructorCreated && _scope.Count() >= 3 && _scope[1].Equals(_scope[2])) /*took out checking if instertokens.Count>0*/
+                {
+                    _insertTokens.Insert(0, new Token(TokenType.Protected, "protected", lastToken.LineNumber));
+                    _insertTokens.Insert(1, new Token(TokenType.Void, "void", lastToken.LineNumber));
+                    _insertTokens.Insert(2, new Token(TokenType.Identifier, string.Format(_scope[1] + "_INITIALIZER"), lastToken.LineNumber));
+                    _insertTokens.Insert(3, new Token(TokenType.ParenBegin, "(", lastToken.LineNumber));
+                    _insertTokens.Insert(4, new Token(TokenType.ParenEnd, ")", lastToken.LineNumber));
+                    _insertTokens.Insert(5, new Token(TokenType.BlockBegin, "{", lastToken.LineNumber));
+
+                    _insertTokens.Add(new Token(TokenType.Return, "return", lastToken.LineNumber));
+                    _insertTokens.Add(new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
+                    _insertTokens.Add(new Token(TokenType.BlockEnd, "}", lastToken.LineNumber));
+
+                    foreach (var r in _insertTokens)
+                        _recordTokens.Add(r);
+                    _insertTokens.Clear();
+                    ConstructorCreated = true;
+
+                    //update literals in symtable
+                    var realScope = _scope[0] + "." + _scope[1];
+                    foreach (var s in _syntaxSymbolTable.Where(s => s.Value.Kind.Equals("literal") && s.Value.Scope.Equals(realScope)))
+                        s.Value.Scope += "." + string.Format(_scope[1] + "_INITIALIZER");
+
+                    var symId = GenerateSymId("method");
+
+                    _syntaxSymbolTable.Add(symId,
+                        new Symbol()
+                        {
+                            Kind = "method",
+                            Scope = realScope,
+                            SymId = symId,
+                            Value = string.Format(_scope[1] + "_INITIALIZER"),
+                            Vars = 0,
+                            Data = new Data()
+                            {
+                                Type = "void",
+                                AccessMod = "protected",
+                                Params = new List<string>()
+                            }
+                        });
+                }
+            }
+
             //leave
             outScope(name);
-
-            //add ending return statement
-            AddImpliedReturnStatement();
         }
 
         private bool AssignmentExpression()
@@ -1000,53 +1046,9 @@ namespace KXIParse
                 VariableDeclaration();
             while (GetToken()!=null && (PeekStatement.Contains(GetToken().Type) || PeekExpression.Contains(GetToken().Type)))
                 Statement();
+
             Expect(TokenType.BlockEnd);
 
-            if (Syntaxing)
-            {
-                if (_insertTokens != null && !ConstructorCreated && _scope.Count() >= 3 && _scope[1].Equals(_scope[2])) /*took out checking if instertokens.Count>0*/
-                {
-                    _insertTokens.Insert(0, new Token(TokenType.Protected, "protected", lastToken.LineNumber));
-                    _insertTokens.Insert(1, new Token(TokenType.Void, "void", lastToken.LineNumber));
-                    _insertTokens.Insert(2, new Token(TokenType.Identifier, string.Format(_scope[1]+"_INITIALIZER"), lastToken.LineNumber));
-                    _insertTokens.Insert(3, new Token(TokenType.ParenBegin, "(", lastToken.LineNumber));
-                    _insertTokens.Insert(4, new Token(TokenType.ParenEnd, ")", lastToken.LineNumber));
-                    _insertTokens.Insert(5, new Token(TokenType.BlockBegin, "{", lastToken.LineNumber));
-
-                    _insertTokens.Add(new Token(TokenType.Return, "return", lastToken.LineNumber));
-                    _insertTokens.Add(new Token(TokenType.This, "this", lastToken.LineNumber));
-                    _insertTokens.Add(new Token(TokenType.Semicolon, ";", lastToken.LineNumber));
-                    _insertTokens.Add(new Token(TokenType.BlockEnd, "}", lastToken.LineNumber));
-
-                    foreach (var r in _insertTokens)
-                        _recordTokens.Add(r);
-                    _insertTokens.Clear();
-                    ConstructorCreated = true;
-
-                    //update literals in symtable
-                    var realScope = _scope[0] + "." + _scope[1];
-                    foreach (var s in _syntaxSymbolTable.Where(s => s.Value.Kind.Equals("literal") && s.Value.Scope.Equals(realScope)))
-                        s.Value.Scope += "." + string.Format(_scope[1] + "_INITIALIZER");
-
-                    var symId = GenerateSymId("method");
-                    
-                    _syntaxSymbolTable.Add(symId,
-                        new Symbol()
-                        {
-                            Kind = "method",
-                            Scope = realScope,
-                            SymId = symId,
-                            Value = string.Format(_scope[1] + "_INITIALIZER"),
-                            Vars = 0,
-                            Data = new Data()
-                            {
-                                Type = "void",
-                                AccessMod = "protected",
-                                Params = new List<string>()
-                            }
-                        });
-                }
-            }
         }
 
         private void VariableDeclaration()
