@@ -13,7 +13,7 @@ class iTree {
 	else return (fib(root - 1) + fib(root - 2));
     }
 
-    unprotected bool add(char key) {
+    unprotected bool add(int key) {
 	if (root == null) {
 	    root = new iNode(key);
 	    return true;
@@ -202,12 +202,33 @@ class Syntax {
       }
 }
 
+class Butterfly {
+      protected int age = 42;
+      protected char type = 'm';
+
+      Butterfly(int age, char type) {
+          cout << age;
+          cout << '\n';
+	  cout << type;
+          cout << '\n';
+      }
+
+      unprotected void nest() {
+          cout << age;
+          cout << '\n';
+	  cout << type;
+          cout << '\n';
+      }
+}
 void kxi2015 main() {
     char key;
     char nl; // newline char
     iTree tree;
     Message msg = new Message();
-    tree = new iTree();
+    Butterfly bff = new Butterfly(37, 'g');
+	tree = new iTree();
+
+    bff.nest();
 
     msg.msg3();
     cin >> key;

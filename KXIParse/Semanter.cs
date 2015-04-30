@@ -618,6 +618,19 @@ namespace KXIParse
                         string.Format(
                             "Semantic error at line {0}: Constructor for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
                             lineNumber, typeSar.Value, argName, symbol.Data.Type ?? "null", _symbolTable[a].Data.Type));
+                if (argRecord.LinkedSymbol != null && argRecord.LinkedSymbol.Data != null)
+                {
+                    var v1 = symbol.Data.Type;
+                    var v2 = argRecord.LinkedSymbol.Data.Type;
+                    if (ValueMap.ContainsKey(v1)) v1 = ValueMap[v1];
+                    if (ValueMap.ContainsKey(v2)) v2 = ValueMap[v2];
+                    if (!v1.Equals(v2))
+                        throw new Exception(
+                            string.Format(
+                                "Semantic error at line {0}: Constructor for class '{1}' does not have a param '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                lineNumber, typeSar.Value, argName, argRecord.LinkedSymbol.Data.Type,
+                                _symbolTable[a].Data.Type));
+                }
                 newSar.ArgumentList.Push(argRecord);
             }
             _recordStack.Push(newSar);
