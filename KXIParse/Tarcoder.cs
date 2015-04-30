@@ -899,6 +899,8 @@ namespace KXIParse
 
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", q.Operation, rC, rB, "", "");
+
+            DeallocRefValue(q.Operand3, rC);
         }
         private void ConvertBoolInstruction(Quad q)
         {
@@ -1053,6 +1055,8 @@ namespace KXIParse
             }
 
             AddTriad("", "MOV", rA, "R0", "", "; Reading user input into "+rA);
+
+            DeallocRefValue(q.Operand2, rA);
         }
         private void ConvertObjRefInstruction(Quad q)
         {
@@ -1097,6 +1101,8 @@ namespace KXIParse
 
             AddTriad("", "MOV", rC, rA, "", "");
             AddTriad("", op, rC, rB, "", "");
+
+            DeallocRefValue(q.Operand3, rC);
         }
         private void ConvertFrameInstruction(Quad q)
         {
