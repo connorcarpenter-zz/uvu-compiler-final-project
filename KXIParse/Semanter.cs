@@ -232,52 +232,62 @@ namespace KXIParse
                     select s.Value).FirstOrDefault();
                 newRecord.LinkedSymbol = symbol;
             }
-            if(newRecord.LinkedSymbol != null)
+            if (newRecord.LinkedSymbol != null)
             {
-            //test arguments
+                //test arguments
                 var oldStack = new List<Record>(argumentList.ArgumentList);
                 if (oldStack.Count() != newRecord.LinkedSymbol.Data.Params.Count())
                     throw new Exception(
-                            string.Format(
-                                "Semantic error at line {0}: Method '{1}' does not have the correct number of parameters (expected {2})",
-                                lineNumber, newRecord.Value, newRecord.LinkedSymbol.Data.Params.Count()));
-                    foreach (var a in newRecord.LinkedSymbol.Data.Params)
+                        string.Format(
+                            "Semantic error at line {0}: Method '{1}' does not have the correct number of parameters (expected {2})",
+                            lineNumber, newRecord.Value, newRecord.LinkedSymbol.Data.Params.Count()));
+                foreach (var a in newRecord.LinkedSymbol.Data.Params)
+                {
+                    var argRecord = oldStack.First();
+                    oldStack.RemoveAt(0);
+                    var argName = argRecord.Value;
+                    var psymbol = _symbolTable[a];
+                    var compareStr = argName;
+                    if (argRecord.LinkedSymbol != null && argRecord.LinkedSymbol.Data != null)
+                        compareStr = argRecord.LinkedSymbol.Data.Type;
+                    if (_symbolTable.ContainsKey(compareStr)) compareStr = _symbolTable[compareStr].Data.Type;
+                    if (ValueMap.ContainsKey(argName)) compareStr = ValueMap[argName];
+                    if (!psymbol.Data.Type.Equals(compareStr))
                     {
-                        var argRecord = oldStack.First();
-                        oldStack.RemoveAt(0);
-                        var argName = argRecord.Value;
-                        var psymbol = _symbolTable[a];
-                        var compareStr = argName;
-                        if (argRecord.LinkedSymbol != null && argRecord.LinkedSymbol.Data != null)
-                            compareStr = argRecord.LinkedSymbol.Data.Type;
-                        if (_symbolTable.ContainsKey(compareStr)) compareStr = _symbolTable[compareStr].Data.Type;
-                        if (ValueMap.ContainsKey(argName)) compareStr = ValueMap[argName];
-                        if (!psymbol.Data.Type.Equals(compareStr))
+                        if (psymbol != _symbolTable[a])
                         {
-                            if (psymbol != _symbolTable[a])
-                            {
-                                throw new Exception(
-                                    string.Format(
-                                        "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
-                                        lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
-                                        _symbolTable[a].Data.Type));
-                            }
-                            else
-                            {
-                                throw new Exception(
-                                    string.Format(
-                                        "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
-                                        lineNumber, newRecord.Value, argName, compareStr,
-                                        _symbolTable[a].Data.Type));
-                            }
+                            throw new Exception(
+                                string.Format(
+                                    "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                    lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
+                                    _symbolTable[a].Data.Type));
                         }
                         else
                         {
-                            
+                            throw new Exception(
+                                string.Format(
+                                    "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                    lineNumber, newRecord.Value, argName, compareStr,
+                                    _symbolTable[a].Data.Type));
                         }
                     }
+                }
 
                 //
+            }
+            else
+            {
+                var checkSymbol = (from s in _symbolTable
+                              where s.Value.Scope == "g." + peekRecord.LinkedSymbol.Data.Type &&
+                                    s.Value.Value == functionName.Value &&
+                                    s.Value.Data.AccessMod.Equals("protected") &&
+                                    s.Value.Kind.ToLower().Equals("method")
+                              select s.Value).FirstOrDefault();
+                if (checkSymbol != null)
+                    throw new Exception(
+                        string.Format(
+                            "Semantic error at line {0}: '{1}' is protected and can't be accessed from this scope.",
+                            lineNumber, functionName.Value));
             }
 
             var scopeStrs = scope.Split('.');
@@ -561,6 +571,13 @@ namespace KXIParse
             }
             else
             {
+                var checkSymbol = (from s in _symbolTable
+                              where s.Value.Scope == "g." + parentId.LinkedSymbol.Data.Type &&
+                                  s.Value.Value == childId.Value &&
+                                  s.Value.Data.AccessMod.Equals("protected")
+                              select s.Value).FirstOrDefault();
+                if(checkSymbol!=null)
+                    throw new Exception(string.Format("Semantic error at line {0}: Identifier {2}.{1} is protected and can't be accessed from this scope", lineNumber, childId.Value, parentId.Value));
                 throw new Exception(string.Format("Semantic error at line {0}: Identifier {2}.{1} does not exist", lineNumber, childId.Value, parentId.Value));
             }
             if (DEBUG) Console.WriteLine("   rExist");
@@ -710,7 +727,18 @@ namespace KXIParse
                     }
                 }
 
-                CheckRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
+                if(i2.TempVariable!=null && i2.TempVariable.ToString().StartsWith("_atmp") && i2.LinkedSymbol!=null && i2.LinkedSymbol.Data!=null && i2.LinkedSymbol.Data.WasArray && i1.LinkedSymbol!=null && i1.LinkedSymbol.Kind==i2.LinkedSymbol.Kind)
+                {
+                    if (i1.TempVariable == null && i1.ArgumentList == null)
+                         CheckRecordsAreSameType(GetCompareString(i1), GetCompareString(i2)+"[]", lineNumber);
+                }
+                else if(i1.TempVariable!=null && i1.TempVariable.ToString().StartsWith("_atmp") && i1.LinkedSymbol!=null && i1.LinkedSymbol.Data!=null && i1.LinkedSymbol.Data.WasArray && i2.LinkedSymbol!=null && i2.LinkedSymbol.Kind==i1.LinkedSymbol.Kind)
+                {
+                    if (i2.TempVariable == null && i2.ArgumentList == null)
+                         CheckRecordsAreSameType(GetCompareString(i2), GetCompareString(i1)+"[]", lineNumber);
+                }
+                else
+                    CheckRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
 
                 if (nextOp != Operator.Assignment)
                 {
