@@ -141,7 +141,7 @@ namespace KXIParse
             var operation = "REF";
             var operand1 = ToOperand(r1);
             var operand2 = r3.LinkedSymbol.SymId;
-            var operand3 = ToOperand(r3);
+            var operand3 = ToOperand(r3,true);
 
             WriteQuad("", operation, operand1, operand2, operand3,"reference");
         }
@@ -260,7 +260,6 @@ namespace KXIParse
                         return r.LinkedSymbol.SymId;
                     switch (r.Type)
                     {
-                        case Semanter.RecordType.Reference:
                         case Semanter.RecordType.New:
                         case Semanter.RecordType.NewArray:
                             return r.TempVariable.ToString();
@@ -270,6 +269,7 @@ namespace KXIParse
                             break;
                         case Semanter.RecordType.LVar:
                         case Semanter.RecordType.Identifier:
+                        case Semanter.RecordType.Reference:
                             if (r.LinkedSymbol.Kind.ToLower().Equals("method") && r.TempVariable != null &&
                                 r.TempVariable.ToString().Length != 0)
                                 return r.TempVariable.ToString();

@@ -501,7 +501,7 @@ namespace KXIParse
             return symbol;
         }
 
-        public void rExist(int lineNumber) //member reference identifier exists
+        public void rExist(int lineNumber,string scope) //member reference identifier exists
         {
             var childId = _recordStack.Pop();
             var parentId = _recordStack.Pop();
@@ -517,7 +517,7 @@ namespace KXIParse
                     LinkedSymbol = symbol
                 };
                 if (newRecord.TempVariable == null || newRecord.TempVariable.ToString().Length == 0)
-                    newRecord.TempVariable = _intercoder.GetTempVarName(childId);
+                    newRecord.TempVariable = _intercoder.GetATempVarName(childId,scope);
                 _recordStack.Push(newRecord);
 
                 if (childId.Type == RecordType.Func)

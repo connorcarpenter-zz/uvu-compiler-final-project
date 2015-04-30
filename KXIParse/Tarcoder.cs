@@ -995,8 +995,19 @@ namespace KXIParse
                 var rB = GetRegister(q.Operand2);
 
                 AddTriad("", "MOV", rB, rA, "", "");
+                DeallocRefValue(q.Operand2, rB);
             }
         }
+
+        private void DeallocRefValue(string operand2, string rB)
+        {
+            if (operand2.StartsWith("_atmp") && operand2.EndsWith("_value"))
+            {
+                CleanInUseRegisters(rB);
+                DeallocRegister(rB);
+            }
+        }
+
         private void ConvertWriteInstruction(Quad q)
         {
             var rA = GetRegister(q.Operand2);

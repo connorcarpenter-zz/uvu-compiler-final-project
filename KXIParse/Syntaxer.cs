@@ -890,7 +890,7 @@ namespace KXIParse
             if(Peek(TokenType.ParenBegin) || Peek(TokenType.ArrayBegin))
                 FnArrMember();
             if (Semanting)
-                _semanter.rExist(lastToken.LineNumber);
+                _semanter.rExist(lastToken.LineNumber,GetScopeString());
             if (Peek(TokenType.Period))
                 MemberRefz();
         }
