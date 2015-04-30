@@ -41,7 +41,8 @@ namespace KXIParse
             ArrayElement
         }
 
-        public List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym","void" };
+        public static List<string> VariableTypes = new List<string> { "int", "char", "bool", "sym","void" };
+        public static List<string> OtherTypes = new List<string> {"null"}; 
 
         internal class Record
         {
@@ -140,7 +141,10 @@ namespace KXIParse
                 };
 
                 //newSar.LinkedSymbol = GetSizeRecord(newSar);
+                if (newSar.LinkedSymbol.Data.IsArray)
+                    newSar.LinkedSymbol.Data.WasArray = true;
                 newSar.LinkedSymbol.Data.IsArray = false;
+                
                 _recordStack.Push(newSar);
                 _intercoder.WriteArray(index, typeSar, newSar);
             }
@@ -279,6 +283,13 @@ namespace KXIParse
         public void checkSpawn(string scope, int lineNumber)
         {
             var sar = _recordStack.Pop();//supposed to test whether this exists in the current scope, but i kinda already did this with the previous iExist so...
+            if (sar.LinkedSymbol != null && sar.LinkedSymbol.Data != null && sar.LinkedSymbol.Data.WasArray)
+            {
+                sar.LinkedSymbol.Data.IsArray = true;
+                sar.LinkedSymbol.Data.WasArray = false;
+            }
+            if (!GetCompareString(sar).Equals("int"))
+                throw new Exception(string.Format("Semantic error at line {0}: 'Spawn' label {1} must be an integer", lineNumber));
             var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
             if (DEBUG) Console.WriteLine("   checkSpawn: " + refSar.Value);
         }
@@ -666,6 +677,7 @@ namespace KXIParse
                         i1.LinkedSymbol.Data.Type = i2type;
                     }
                 }
+
                 CheckRecordsAreSameType(GetCompareString(i1), GetCompareString(i2), lineNumber);
 
                 if (nextOp != Operator.Assignment)
@@ -686,16 +698,37 @@ namespace KXIParse
                     _intercoder.WriteOperation(nextOp, i2, i1, result);//CONNORWAZHERE
                 else
                     _intercoder.WriteOperation(nextOp, i1, i2, result);//CONNORWAZHERE
+
+                if(nextOp == Operator.Assignment)
+                {
+                    if (i2.LinkedSymbol != null && i2.LinkedSymbol.Data != null && i2.LinkedSymbol.Data.WasArray)
+                    {
+                        i2.LinkedSymbol.Data.WasArray = false;
+                        i2.LinkedSymbol.Data.IsArray = true;
+                    }
+                }
             }
         }
 
         private static void CheckRecordsAreSameType(string v1,string v2,int lineNumber)
         {
-            if(!v1.Equals(v2))
+            if (!v1.Equals(v2))
+            {
+                checkTypeExists(v1,lineNumber);
+                checkTypeExists(v2, lineNumber);
+
                 throw new Exception(string.Format("Semantic error at line {0}: Trying to perform operation between types '{1}' and '{2}'",
                                 lineNumber,
                                 v1,
                                 v2));
+            }
+        }
+
+        private static void checkTypeExists(string type,int lineNumber)
+        {
+            if (type.EndsWith("[]")) type = type.Replace("[]", "");
+            if (!_symbolTable.Any(s => s.Value.Kind == "Class" && s.Value.Value == type) && !VariableTypes.Contains(type) && !OtherTypes.Contains(type))
+                throw new Exception(string.Format("Semantic error at line {0}: Trying to compare with unknown symbol type \"{1}\"", lineNumber, type));
         }
 
         private static string GetCompareString(Record r)

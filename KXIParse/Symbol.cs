@@ -20,6 +20,8 @@ namespace KXIParse
         public bool IsArray { get; set; }
         public List<string> Params { get; set; }
         public List<string> OVars { get; set; }
+        public bool WasArray { get; set; }
+
         public int Size = 4;
     }
 }

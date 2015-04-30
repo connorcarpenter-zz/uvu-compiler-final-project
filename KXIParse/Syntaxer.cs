@@ -432,6 +432,12 @@ namespace KXIParse
             {
                 var paramList = new List<string>();
 
+                if (Semanting)
+                {
+                    //check for duplicate param/ivar names
+                    _semanter.checkVarDuplicates(name, "method", GetScopeString(), lastToken.LineNumber);
+                }
+
                 Expect(TokenType.ParenBegin);
                 if (Peek(TokenType.Type))
                 {
@@ -466,12 +472,7 @@ namespace KXIParse
                             }
                         });
                 }
-                if (Semanting)
-                {
-                    //check for duplicate param/ivar names
-                    _semanter.checkVarDuplicates(name,"method", GetScopeString(), lastToken.LineNumber);
-                }
-
+                
                 if (Semanting)
                 {
                     //add label
@@ -561,6 +562,11 @@ namespace KXIParse
 
         private bool AssignmentExpression()
         {
+            if (lastToken.LineNumber == 186)
+            {
+                var x = 4;
+            }
+
             if (DEBUGMETA) Console.WriteLine("--Assignment Expression");
 
             if (Accept(TokenType.This))
@@ -740,7 +746,7 @@ namespace KXIParse
             }
         }
 
-        private bool Expression()
+        private bool Expression(bool canAssignment = false)
         {
             if (DEBUGMETA) Console.WriteLine("--Expression");
 
@@ -826,7 +832,7 @@ namespace KXIParse
                 }
 
                 if(PeekExpressionZ.Contains(GetToken().Type))
-                    ExpressionZ();
+                    ExpressionZ(canAssignment);
             }
             catch (Exception e)
             {
@@ -900,19 +906,23 @@ namespace KXIParse
                 MemberRefz();
         }
 
-        private bool ExpressionZ()
+        private bool ExpressionZ(bool canAssignment = false)
         {
             if (DEBUGMETA) Console.WriteLine("--Expression Z");
 
-            if (Accept(TokenType.Assignment))
+            if (canAssignment)
             {
-                if (Semanting)
+                if (Accept(TokenType.Assignment))
                 {
-                    //_semanter.checkArrayIndexAssignment();
-                    _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
+                    if (Semanting)
+                    {
+                        //_semanter.checkArrayIndexAssignment();
+                        _semanter.oPush(Semanter.Operator.Assignment, lastToken.LineNumber);
+                    }
+                    return AssignmentExpression();
                 }
-                return AssignmentExpression();
             }
+
             if (Accept(TokenType.And) || Accept(TokenType.Or) || Accept(TokenType.Equals) ||
                 Accept(TokenType.NotEquals) || Accept(TokenType.LessOrEqual) || Accept(TokenType.MoreOrEqual) ||
                 Accept(TokenType.Less) || Accept(TokenType.More) || Accept(TokenType.Add) ||
@@ -995,6 +1005,7 @@ namespace KXIParse
 
         private void VariableDeclaration()
         {
+
             if (DEBUGMETA) Console.WriteLine("--Variable Declaration");
 
             var tokenType = GetToken().Type;
@@ -1286,7 +1297,7 @@ namespace KXIParse
                     _semanter.checkRelease(lastToken.LineNumber);
                 return;
             }
-            if (Expression())
+            if (Expression(true))
             {
                 Expect(TokenType.Semicolon);
                 if(Semanting)
