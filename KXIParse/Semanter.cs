@@ -252,12 +252,29 @@ namespace KXIParse
                             compareStr = argRecord.LinkedSymbol.Data.Type;
                         if (_symbolTable.ContainsKey(compareStr)) compareStr = _symbolTable[compareStr].Data.Type;
                         if (ValueMap.ContainsKey(argName)) compareStr = ValueMap[argName];
-                        if(!psymbol.Data.Type.Equals(compareStr))
-                        throw new Exception(
-                            string.Format(
-                                "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
-                                lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
-                                _symbolTable[a].Data.Type));
+                        if (!psymbol.Data.Type.Equals(compareStr))
+                        {
+                            if (psymbol != _symbolTable[a])
+                            {
+                                throw new Exception(
+                                    string.Format(
+                                        "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                        lineNumber, newRecord.Value, argName, psymbol.Data.Type ?? "null",
+                                        _symbolTable[a].Data.Type));
+                            }
+                            else
+                            {
+                                throw new Exception(
+                                    string.Format(
+                                        "Semantic error at line {0}: '{1}' does not have a parameter '{2}' of type '{3}', expected a value of type '{4}' instead",
+                                        lineNumber, newRecord.Value, argName, compareStr,
+                                        _symbolTable[a].Data.Type));
+                            }
+                        }
+                        else
+                        {
+                            
+                        }
                     }
 
                 //
@@ -291,6 +308,8 @@ namespace KXIParse
             if (!GetCompareString(sar).Equals("int"))
                 throw new Exception(string.Format("Semantic error at line {0}: Spawn status variable {1} must be of type: integer", lineNumber,sar.Value));
             var refSar = _recordStack.Pop();//still not quite sure what this is supposed to do...
+            if (refSar.LinkedSymbol == null || !refSar.LinkedSymbol.Kind.Equals("method"))
+                throw new Exception(string.Format("Semantic error at line {0}: Spawn must have an associated method. '{1}' is not a function.", lineNumber, refSar.Value));
             if (DEBUG) Console.WriteLine("   checkSpawn: " + refSar.Value);
         }
 
