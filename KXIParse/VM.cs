@@ -574,7 +574,11 @@ namespace KXIParse
                 var command = opcodeMapR[(int)mem[PC]];
                 var debugLine = PC/4;
 
-                if (debugLine == 2324)
+                if (debugLine == 1357)
+                {
+                    var a = 0;
+                }
+                if (debugLine == 1430)
                 {
                     var a = 0;
                 }

@@ -55,7 +55,7 @@ namespace KXIParse
             _labelNames = new List<string>();
         }
 
-        public string GetTempVarName(Record r)
+        public string GetTempVarName(Record r,string scope ="")
         {
             if (r == null || r.LinkedSymbol == null || r.LinkedSymbol.Scope == null || r.LinkedSymbol.Scope.Length == 0)
             {
@@ -64,7 +64,16 @@ namespace KXIParse
             var name = "_tmp" + _tempVarNames.Count;
             _tempVarNames.Push(name);
 
-            symbolTable.Add(name,new Symbol{Scope = r.LinkedSymbol.Scope,Data=r.LinkedSymbol.Data,Kind="temp",SymId=name,Value=name});
+            if (name.Equals("_tmp55"))
+            {
+                var j = 3;
+            }
+
+            var newSymbol = new Symbol{Scope = r.LinkedSymbol.Scope,Data=r.LinkedSymbol.Data,Kind="temp",SymId=name,Value=name};
+            symbolTable.Add(name,newSymbol);
+
+            if (scope.Length!=0 && r.Type == Semanter.RecordType.Func && r.LinkedSymbol != null && r.LinkedSymbol.Kind.Equals("method") && !newSymbol.Scope.EndsWith(r.LinkedSymbol.Value))
+                newSymbol.Scope = scope;
 
             return name;
         }
@@ -418,9 +427,9 @@ namespace KXIParse
             WriteQuad("", "CALL", r1.LinkedSymbol.SymId, "", "", "function");
         }
 
-        public void WriteFunctionPeek(Record r)
+        public void WriteFunctionPeek(Record r,string scope = "")
         {
-            var tempVar = GetTempVarName(r);
+            var tempVar = GetTempVarName(r,scope);
             WriteQuad("", "PEEK", tempVar, "", "", "function");
             r.TempVariable = tempVar;
             //_tempVarNames.Pop();

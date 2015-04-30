@@ -270,10 +270,10 @@ namespace KXIParse
             if (DEBUG) Console.WriteLine("   Func: " + functionName.Value);
         }
 
-        public void funcPeek()
+        public void funcPeek(string scope = "")
         {
             var rec = _recordStack.Peek();
-            _intercoder.WriteFunctionPeek(rec);
+            _intercoder.WriteFunctionPeek(rec,scope);
         }
 
         public void checkSpawn(string scope, int lineNumber)

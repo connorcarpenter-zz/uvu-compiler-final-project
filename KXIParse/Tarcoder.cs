@@ -102,6 +102,12 @@ namespace KXIParse
 
                 var scope = sym1.Value.Scope.Split('.');
                 var found = false;
+
+                if(sym1.Key.Equals("_tmp55") || sym1.Key.Equals("_par4"))
+                {
+                    var a = 0;
+                }
+
                 switch (sym1.Value.Kind)
                 {
                     case "ivar":
@@ -252,7 +258,7 @@ namespace KXIParse
             {
                 outputList.Add(q.ToString());
 
-                if (q.ToString().Equals("FRAME _met8 this "))
+                if (q.ToString().Equals("FRAME _met4 this "))
                 {
                     var f = 0;
                 }

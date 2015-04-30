@@ -873,7 +873,7 @@ namespace KXIParse
                         var x = 5;
                         //this used to be where funcPeek was
                     }
-                    _semanter.funcPeek();
+                    _semanter.funcPeek(GetScopeString());
                 }
             }
         }
